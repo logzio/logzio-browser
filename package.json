@@ -29,9 +29,9 @@
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/context-zone-peer-dep": "^2.0.1",
-    "@opentelemetry/exporter-logs-otlp-http": "^0.203.0",
-    "@opentelemetry/exporter-metrics-otlp-http": "^0.203.0",
-    "@opentelemetry/exporter-trace-otlp-http": "^0.203.0",
+    "@opentelemetry/exporter-logs-otlp-proto": "^0.203.0",
+    "@opentelemetry/exporter-metrics-otlp-proto": "^0.203.0",
+    "@opentelemetry/exporter-trace-otlp-proto": "^0.203.0",
     "@opentelemetry/instrumentation-document-load": "^0.48.0",
     "@opentelemetry/instrumentation-fetch": "^0.203.0",
     "@opentelemetry/instrumentation-user-interaction": "^0.48.0",

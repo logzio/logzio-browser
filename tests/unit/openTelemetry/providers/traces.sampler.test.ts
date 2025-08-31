@@ -73,7 +73,7 @@ jest.mock('@opentelemetry/sdk-trace-web', () => ({
   },
 }));
 
-jest.mock('@opentelemetry/exporter-trace-otlp-http', () => ({
+jest.mock('@opentelemetry/exporter-trace-otlp-proto', () => ({
   OTLPTraceExporter: class MockOTLPTraceExporter {
     config: any;
     constructor(config: any) {

@@ -40,7 +40,7 @@ jest.mock('@opentelemetry/sdk-metrics', () => ({
 }));
 
 // Mock OTLPMetricExporter
-jest.mock('@opentelemetry/exporter-metrics-otlp-http', () => ({
+jest.mock('@opentelemetry/exporter-metrics-otlp-proto', () => ({
   OTLPMetricExporter: class MockOTLPMetricExporter {
     constructor(options: any) {
       exporterInstances.push(this);

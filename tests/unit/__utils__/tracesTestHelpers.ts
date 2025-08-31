@@ -72,7 +72,7 @@ export const createTraceWebMocks = () => {
   };
 };
 
-// Mock @opentelemetry/exporter-trace-otlp-http
+// Mock @opentelemetry/exporter-trace-otlp-proto
 export const createOtlpHttpMocks = () => {
   class MockOTLPTraceExporter {
     config: any;
@@ -121,7 +121,9 @@ export const setupTracesTest = () => {
 export const tracesProviderMocks = {
   '@opentelemetry/resources': createResourceMocks(),
   '@opentelemetry/sdk-trace-web': createTraceWebMocks(),
-  '@opentelemetry/exporter-trace-otlp-http': createOtlpHttpMocks(),
+  '@opentelemetry/exporter-trace-otlp-proto': createOtlpHttpMocks(),
+  '@opentelemetry/exporter-logs-otlp-proto': createOtlpHttpMocks(),
+  '@opentelemetry/exporter-metrics-otlp-proto': createOtlpHttpMocks(),
 };
 
 /**

@@ -7,7 +7,7 @@ import {
   PushMetricExporter,
   ViewOptions as MetricView,
 } from '@opentelemetry/sdk-metrics';
-import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
+import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-proto';
 import { ATTR_SESSION_ID, ATTR_VIEW_ID } from '../../instrumentation';
 import { rumContextManager } from '../../context/LogzioContextManager';
 import { RUMConfig } from '../../config';

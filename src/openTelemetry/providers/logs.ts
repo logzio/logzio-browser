@@ -5,7 +5,7 @@ import {
   LogRecordProcessor,
   BatchLogRecordProcessor,
 } from '@opentelemetry/sdk-logs';
-import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http';
+import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-proto';
 import { SessionContextLogProcessor } from '../processors';
 import { RUMConfig } from '../../config';
 import {

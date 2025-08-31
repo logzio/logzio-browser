@@ -68,7 +68,7 @@ jest.mock('@src/openTelemetry/processors', () => {
 
 // Mock OTLPLogExporter
 const exporterInstances: any[] = [];
-jest.mock('@opentelemetry/exporter-logs-otlp-http', () => {
+jest.mock('@opentelemetry/exporter-logs-otlp-proto', () => {
   class MockOTLPLogExporter {
     options: any;
     constructor(options: any) {

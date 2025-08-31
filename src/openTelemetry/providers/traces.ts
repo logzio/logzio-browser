@@ -10,7 +10,7 @@ import {
   WebTracerProvider,
   TraceIdRatioBasedSampler,
 } from '@opentelemetry/sdk-trace-web';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
 import { RUMConfig } from '../../config';
 import { FrustrationDetectionProcessor, SessionContextSpanProcessor } from '../processors';
 import {
