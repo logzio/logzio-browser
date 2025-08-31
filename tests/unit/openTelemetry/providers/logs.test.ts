@@ -1,4 +1,9 @@
-import { MAX_BULK_SIZE, MAX_LOG_WAIT_MS } from '../../../../src/openTelemetry/providers/constants';
+import {
+  LOGZIO_REGION_HEADER,
+  LOGZIO_LOGS_TOKEN_HEADER,
+  MAX_BULK_SIZE,
+  MAX_LOG_WAIT_MS,
+} from '../../../../src/openTelemetry/providers/constants';
 
 // Track all constructor calls for verification
 const mockConstructCalls: any[] = [];
@@ -150,7 +155,10 @@ describe('logs provider', () => {
 
     const [, options] = exporterCall;
     expect(options.url).toBe(endpoint);
-    expect(options.headers).toEqual({ LOGZIO_REGION: 'us', LOGZIO_LOGS_TOKEN: 't' });
+    expect(options.headers).toEqual({
+      [LOGZIO_REGION_HEADER]: 'us',
+      [LOGZIO_LOGS_TOKEN_HEADER]: 't',
+    });
   });
 
   it('should not throw with various endpoint formats', () => {

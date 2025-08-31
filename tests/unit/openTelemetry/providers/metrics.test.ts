@@ -1,4 +1,8 @@
-import { MAX_METRIC_WAIT_MS } from '@src/openTelemetry/providers/constants';
+import {
+  LOGZIO_REGION_HEADER,
+  LOGZIO_METRICS_TOKEN_HEADER,
+  MAX_METRIC_WAIT_MS,
+} from '@src/openTelemetry/providers/constants';
 import { ATTR_SESSION_ID, ATTR_VIEW_ID } from '@src/instrumentation';
 
 // Track constructor calls
@@ -131,7 +135,10 @@ describe('metrics provider', () => {
     const exporterCall = mockConstructCalls.find(([name]) => name === 'OTLPMetricExporter');
     const [, options] = exporterCall;
     expect(options.url).toBe(endpoint);
-    expect(options.headers).toEqual({ LOGZIO_REGION: 'us', LOGZIO_METRICS_TOKEN: 'm' });
+    expect(options.headers).toEqual({
+      [LOGZIO_REGION_HEADER]: 'us',
+      [LOGZIO_METRICS_TOKEN_HEADER]: 'm',
+    });
   });
 
   describe('attributeProcessor', () => {
