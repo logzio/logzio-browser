@@ -1,0 +1,9 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Block push if format or lint checks fail
+echo "Running format check..."
+npm run check-format
+
+echo "Running lint check..."
+npm run lint

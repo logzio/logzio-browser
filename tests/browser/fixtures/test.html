@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RUM Browser Integration Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .test-button {
+        background: #007cba;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        margin: 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+
+      .test-button:hover {
+        background: #005a87;
+      }
+
+      .test-button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+
+      .large-content {
+        height: 200px;
+        background: linear-gradient(45deg, #f0f0f0, #e0e0e0);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 10px 0;
+      }
+
+      .error-trigger {
+        background: #dc3545;
+      }
+
+      .error-trigger:hover {
+        background: #c82333;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>RUM Browser Integration Test Page</h1>
+
+    <div class="test-section">
+      <h2>User Interactions</h2>
+      <button class="test-button" id="click-test">Click Me</button>
+      <button class="test-button" id="rage-click-target">Rage Click Target</button>
+      <button class="test-button" disabled id="dead-click-target">Dead Click (Disabled)</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Performance Test Content</h2>
+      <div class="large-content">Large Content Block 1</div>
+      <div class="large-content">Large Content Block 2</div>
+      <div class="large-content">Large Content Block 3</div>
+    </div>
+
+    <div class="test-section">
+      <h2>Network Requests</h2>
+      <button class="test-button" id="fetch-test">Test Fetch</button>
+      <button class="test-button" id="xhr-test">Test XHR</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Console & Errors</h2>
+      <button class="test-button" id="console-test">Log Message</button>
+      <button class="test-button error-trigger" id="error-test">Trigger Error</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Navigation</h2>
+      <button class="test-button" id="nav-test">Navigate to Page 2</button>
+    </div>
+
+    <div
+      id="test-results"
+      style="
+        margin-top: 20px;
+        font-family: monospace;
+        background: #f5f5f5;
+        padding: 15px;
+        border-radius: 4px;
+      "
+    >
+      Test results will appear here...
+    </div>
+
+    <script>
+      // Basic event handlers for user interaction testing
+      document.getElementById('click-test').addEventListener('click', () => {
+        console.log('Click test button clicked');
+        document.getElementById('test-results').textContent += 'Click event fired\n';
+      });
+
+      document.getElementById('rage-click-target').addEventListener('click', () => {
+        console.log('Rage click target clicked');
+      });
+
+      document.getElementById('dead-click-target').addEventListener('click', () => {
+        console.log('Dead click target clicked (should not fire due to disabled)');
+      });
+
+      document.getElementById('fetch-test').addEventListener('click', async () => {
+        try {
+          const response = await fetch('/api/test');
+          console.log('Fetch test completed:', response.status);
+        } catch (error) {
+          console.log('Fetch test failed:', error.message);
+        }
+      });
+
+      document.getElementById('xhr-test').addEventListener('click', () => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', '/api/test');
+        xhr.onload = () => console.log('XHR test completed:', xhr.status);
+        xhr.onerror = () => console.log('XHR test failed');
+        xhr.send();
+      });
+
+      document.getElementById('console-test').addEventListener('click', () => {
+        console.log('Test console message from browser');
+        console.warn('Test warning message');
+      });
+
+      document.getElementById('error-test').addEventListener('click', () => {
+        throw new Error('Test error from browser');
+      });
+
+      document.getElementById('nav-test').addEventListener('click', () => {
+        // Simulate SPA navigation
+        history.pushState({}, 'Page 2', '/page2');
+        document.querySelector('h1').textContent = 'RUM Browser Test - Page 2';
+      });
+
+      // Expose test helpers for Playwright to use
+      window.testHelpers = {
+        triggerRageClicks: (count = 5) => {
+          const target = document.getElementById('rage-click-target');
+          for (let i = 0; i < count; i++) {
+            target.click();
+          }
+        },
+
+        triggerDeadClick: () => {
+          // Simulate mousedown on disabled button since click events don't fire
+          const button = document.getElementById('dead-click-target');
+          const event = new MouseEvent('mousedown', { bubbles: true });
+          button.dispatchEvent(event);
+        },
+
+        simulateSlowLoad: () => {
+          // Add artificial delay to simulate slow loading
+          const start = Date.now();
+          while (Date.now() - start < 2000) {
+            // Busy wait to simulate heavy computation
+          }
+        },
+      };
+
+      console.log('Test page loaded and ready');
+    </script>
+
+    <!-- RUM library will be loaded by Playwright tests -->
+  </body>
+</html>
