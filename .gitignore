@@ -5,7 +5,6 @@ node_modules
 .env
 coverage
 dist
-.cursor
 playwright-report/*
 .npm*
 test-results/*
