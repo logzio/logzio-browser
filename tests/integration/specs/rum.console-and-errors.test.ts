@@ -6,7 +6,7 @@ import { emitConsole, emitError } from '../helpers/userActions';
 import { waitForRequests, sleep } from '../helpers/wait';
 import {
   assertEnvironmentAttributes,
-  assertLogzioAttributes,
+  assertLogzioHeaders,
   assertConsoleLog,
   assertSessionAndViewIds,
   getAllLogsFromRequests,
@@ -69,7 +69,10 @@ describe('RUM Console and Errors Integration', () => {
 
     // Verify
     assertEnvironmentAttributes(resourceAttributes);
-    assertLogzioAttributes(resourceAttributes);
+    assertLogzioHeaders(collector.received.logs[0].headers, {
+      region: 'us-east-1',
+      logsToken: 'test-logs-token',
+    });
     assertConsoleLog(logRecords, testMessage);
   });
 

@@ -18,6 +18,8 @@ import {
   MIN_SAMPLING_PERCENTAGE,
   MAX_BULK_SIZE,
   MAX_SPAN_WAIT_MS,
+  LOGZIO_REGION_HEADER,
+  LOGZIO_TRACES_TOKEN_HEADER,
 } from './constants';
 
 export function getTraceProvider(
@@ -46,18 +48,19 @@ function getSpanProcessors(endoint: string, config: RUMConfig): SpanProcessor[] 
   return [
     new SessionContextSpanProcessor(),
     ...(config.enable?.frustrationDetection ? [new FrustrationDetectionProcessor(config)] : []),
-    new BatchSpanProcessor(getTraceExporter(endoint), {
+    new BatchSpanProcessor(getTraceExporter(endoint, config), {
       maxExportBatchSize: MAX_BULK_SIZE,
       scheduledDelayMillis: MAX_SPAN_WAIT_MS,
     }),
   ];
 }
 
-function getTraceExporter(endoint: string): SpanExporter {
+function getTraceExporter(endoint: string, config: RUMConfig): SpanExporter {
   return new OTLPTraceExporter({
     url: endoint,
     headers: {
-      // TODO: fine tune
+      [LOGZIO_REGION_HEADER]: config.region,
+      [LOGZIO_TRACES_TOKEN_HEADER]: config.tokens.traces,
     },
   });
 }

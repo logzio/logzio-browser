@@ -28,7 +28,6 @@ export class ConsoleLogsInstrumentation extends InstrumentationBase {
   }
 
   public enable(): void {
-    super.enable();
     try {
       this.patchConsole();
     } catch (err) {
@@ -37,7 +36,6 @@ export class ConsoleLogsInstrumentation extends InstrumentationBase {
   }
 
   public disable(): void {
-    super.disable();
     try {
       this.unpatchConsole();
     } catch (err) {

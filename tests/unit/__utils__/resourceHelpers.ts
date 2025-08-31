@@ -22,17 +22,9 @@ export function expectServiceAttributes(
 /**
  * Asserts that a resource contains expected Logz.io-specific attributes
  */
-export function expectLogzioAttributes(
-  resource: any,
-  expectedRegion: string,
-  expectedToken: string,
-) {
-  expect(resource.attributes).toEqual(
-    expect.objectContaining({
-      'logzio.region': expectedRegion,
-      'logzio.token': expectedToken,
-    }),
-  );
+export function expectLogzioAttributes(resource: any) {
+  expect(resource.attributes).not.toHaveProperty('logzio.region');
+  expect(resource.attributes).not.toHaveProperty('logzio.token');
 }
 
 /**

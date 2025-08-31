@@ -76,10 +76,12 @@ describe('OpenTelemetryProvider Construction', () => {
       expect(mockGetMetricsProvider).toHaveBeenCalledWith(
         expect.anything(),
         'https://whatever/third/party/logzio/endpoint/metrics',
+        config,
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),
         'https://whatever/third/party/logzio/endpoint/logs',
+        config,
       );
     });
   });

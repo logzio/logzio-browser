@@ -59,9 +59,10 @@ export class LogzioContextManager implements ContextManager {
 
   public bind<T>(context: Context, target: T): T {
     if (typeof target === 'function') {
-      return ((...args: unknown[]) => {
-        return this.with(context, target as any, ...args);
-      }) as unknown as T;
+      return function (this: any, ...args: unknown[]) {
+        const manager = LogzioContextManager.getInstance();
+        return manager.with(context, target as any, this, ...args);
+      } as unknown as T;
     }
     return target;
   }
@@ -192,22 +193,30 @@ export class LogzioContextManager implements ContextManager {
           manager._listenerMap.set(listener, boundListener);
 
           return originalAddEventListener.call(this, type, boundListener, options);
-        } else if (listener && typeof listener === 'object' && listener.handleEvent) {
-          // Handle EventListenerObject case
+        } else if (
+          listener &&
+          typeof listener === 'object' &&
+          typeof (listener as EventListenerObject).handleEvent === 'function'
+        ) {
+          // Handle EventListenerObject case, preserve original 'this'
           const manager = LogzioContextManager.getInstance();
           const activeContext = manager.active();
-          const boundHandleEvent = manager.bind(activeContext, listener.handleEvent);
-          const boundListener = { ...listener, handleEvent: boundHandleEvent };
+          const originalObj = listener as EventListenerObject;
+
+          const boundFn = function (this: any, ...evArgs: any[]) {
+            const fn = originalObj.handleEvent.bind(originalObj);
+            return manager.with(activeContext, fn as any, this, ...evArgs);
+          };
 
           manager._listenerMap.set(
-            listener as unknown as EventListener,
-            boundListener as unknown as EventListener,
+            originalObj as unknown as EventListener,
+            boundFn as unknown as EventListener,
           );
 
           return originalAddEventListener.call(
             this,
             type,
-            boundListener as unknown as EventListener,
+            boundFn as unknown as EventListener,
             options,
           );
         }

@@ -35,12 +35,13 @@ export class LogzioRUM {
    */
   private start(): void {
     try {
-      rumLogger.debug('Initializing LogzioRUM');
       this.initComponents();
+      rumLogger.debug('Initializing LogzioRUM');
       const openTelemetryProvider = OpenTelemetryProvider.getInstance(this.config);
       openTelemetryProvider.registerProviders();
       this.startSession();
       openTelemetryProvider.registerInstrumentations(NavigationTracker.getInstance());
+      rumLogger.info('LogzioRUM initialized');
     } catch (error) {
       rumLogger.error('Failed to start LogzioRUM due to error: ', error);
     }

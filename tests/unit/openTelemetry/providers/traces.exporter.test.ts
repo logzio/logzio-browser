@@ -100,7 +100,10 @@ describe('Traces Provider - Exporter Configuration', () => {
 
     const [, options] = exporterCall;
     expect(options.url).toBe(endpoint);
-    expect(options.headers).toEqual({});
+    expect(options.headers).toEqual({
+      LOGZIO_REGION: config.region,
+      LOGZIO_TRACES_TOKEN: config.tokens.traces,
+    });
   });
 
   it('should wire exporter to BatchSpanProcessor correctly', () => {

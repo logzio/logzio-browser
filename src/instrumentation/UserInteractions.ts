@@ -71,6 +71,7 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
   private eventListeners: EventListener[] = [];
   private clickHistory: TimeBoundQueue<HistoryClick> | null = null;
   private navigationUnsubscribe: (() => void) | null = null;
+  private navigationTracker?: NavigationTracker;
 
   constructor(config: LogzioUserInteractionInstrumentationConfig) {
     super(
@@ -88,12 +89,7 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
     this.RAGE_CLICK_THRESHOLD_COUNT = config.frustrationThresholds!.rageClickCount;
     this.RAGE_CLICK_THRESHOLD_INTERVAL_MS = config.frustrationThresholds!.rageClickIntervalMs;
 
-    if (config.navigationTracker) {
-      this.navigationUnsubscribe = config.navigationTracker.subscribe(
-        NavigationEventType.STARTED,
-        this.onNavigation.bind(this),
-      );
-    }
+    this.navigationTracker = config.navigationTracker;
     this.clickHistory = new TimeBoundQueue<HistoryClick>(this.RAGE_CLICK_THRESHOLD_INTERVAL_MS);
   }
 
@@ -103,13 +99,16 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
   }
 
   public enable(): void {
-    super.enable();
     this.setupEventListeners();
+    if (this.navigationTracker) {
+      this.navigationUnsubscribe = this.navigationTracker.subscribe(
+        NavigationEventType.STARTED,
+        this.onNavigation.bind(this),
+      );
+    }
   }
 
   public disable(): void {
-    super.disable();
-
     this.removeEventsListeners();
     this.unsubscribeFromNavigation();
   }
@@ -269,7 +268,7 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
    * @param event the navigation event details.
    */
   private onNavigation(event: NavigationEventData): void {
-    if (event.oldUrl !== event.newUrl && this.isEnabled()) {
+    if (event.oldUrl !== event.newUrl) {
       const span: Span | undefined = trace.getSpan(context.active());
       if (span && typeof span.updateName === 'function') {
         span.updateName(`${SpanName.NAVIGATION} ${event.newUrl}`);

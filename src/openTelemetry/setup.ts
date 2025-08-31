@@ -34,8 +34,6 @@ const enum DataType {
  */
 export class OpenTelemetryProvider {
   private static readonly ENDPOINT = 'https://whatever/third/party/logzio/endpoint';
-  private static readonly ATTR_LOGZIO_TOKEN: string = 'logzio.token';
-  private static readonly ATTR_LOGZIO_REGION: string = 'logzio.region';
 
   private static instance: OpenTelemetryProvider;
 
@@ -150,11 +148,7 @@ export class OpenTelemetryProvider {
    * @returns The trace provider.
    */
   private getTraceProvider(): WebTracerProvider {
-    return getTraceProvider(
-      this.getResource(DataType.TRACES),
-      this.getEndpointUrl(DataType.TRACES),
-      this.config,
-    );
+    return getTraceProvider(this.getResource(), this.getEndpointUrl(DataType.TRACES), this.config);
   }
 
   /**
@@ -163,8 +157,9 @@ export class OpenTelemetryProvider {
    */
   private getMetricsProvider(): MeterProvider {
     return getMetricsProvider(
-      this.getResource(DataType.METRICS),
+      this.getResource(),
       this.getEndpointUrl(DataType.METRICS),
+      this.config,
     );
   }
 
@@ -173,21 +168,15 @@ export class OpenTelemetryProvider {
    * @returns The log provider.
    */
   private getLogProvider(): LoggerProvider {
-    return getLogProvider(this.getResource(DataType.LOGS), this.getEndpointUrl(DataType.LOGS));
+    return getLogProvider(this.getResource(), this.getEndpointUrl(DataType.LOGS), this.config);
   }
 
   /**
    * Returns a resource.
-   * @param dataType - The data type.
    * @returns The resource.
    */
-  private getResource(dataType: DataType): Resource {
+  private getResource(): Resource {
     let resource: Resource = emptyResource();
-    const tokenMap = {
-      [DataType.LOGS]: this.config.tokens.logs,
-      [DataType.METRICS]: this.config.tokens.metrics,
-      [DataType.TRACES]: this.config.tokens.traces,
-    };
 
     if (this.config.service?.name)
       resource = resource.merge(
@@ -202,13 +191,6 @@ export class OpenTelemetryProvider {
           [ATTR_SERVICE_VERSION]: this.config.service!.version,
         }),
       );
-
-    resource = resource.merge(
-      resourceFromAttributes({
-        [OpenTelemetryProvider.ATTR_LOGZIO_REGION]: this.config.region,
-        [OpenTelemetryProvider.ATTR_LOGZIO_TOKEN]: tokenMap[dataType],
-      }),
-    );
 
     const environmentData = EnvironmentCollector.collect({
       collectOS: this.config.environmentData!.collectOS,

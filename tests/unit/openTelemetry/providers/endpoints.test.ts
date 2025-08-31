@@ -43,10 +43,12 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
       expect(mockGetMetricsProvider).toHaveBeenCalledWith(
         expect.anything(),
         'https://whatever/third/party/logzio/endpoint/metrics',
+        config,
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),
         'https://whatever/third/party/logzio/endpoint/logs',
+        config,
       );
     });
   });
@@ -71,10 +73,12 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
       expect(mockGetMetricsProvider).toHaveBeenCalledWith(
         expect.anything(),
         'https://custom.endpoint.com/metrics',
+        config,
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),
         'https://custom.endpoint.com/logs',
+        config,
       );
     });
 
@@ -97,10 +101,12 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
       expect(mockGetMetricsProvider).toHaveBeenCalledWith(
         expect.anything(),
         'https://custom.endpoint.com/metrics',
+        config,
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),
         'https://custom.endpoint.com/logs',
+        config,
       );
     });
   });
@@ -125,10 +131,12 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
       expect(mockGetMetricsProvider).toHaveBeenCalledWith(
         expect.anything(),
         'https://custom.endpoint.com/api/v1',
+        config,
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),
         'https://custom.endpoint.com/api/v1',
+        config,
       );
     });
   });
@@ -156,10 +164,12 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
       expect(mockGetMetricsProvider).toHaveBeenCalledWith(
         expect.anything(),
         'https://whatever/third/party/logzio/endpoint/metrics',
+        config,
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),
         'https://whatever/third/party/logzio/endpoint/logs',
+        config,
       );
     });
 
@@ -198,10 +208,12 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
       expect(mockGetMetricsProvider).toHaveBeenCalledWith(
         expect.anything(),
         'https://whatever/third/party/logzio/endpoint/metrics',
+        config,
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),
         'https://whatever/third/party/logzio/endpoint/logs',
+        config,
       );
     });
   });

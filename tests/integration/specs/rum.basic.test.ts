@@ -6,7 +6,7 @@ import { fireDocumentLoad } from '../helpers/userActions';
 import { waitForRequests } from '../helpers/wait';
 import {
   assertEnvironmentAttributes,
-  assertLogzioAttributes,
+  assertLogzioHeaders,
   assertSessionAndViewIds,
 } from '../helpers/verifiers';
 
@@ -62,7 +62,10 @@ describe('RUM Basic Integration', () => {
 
     expect(spans.length).toBeGreaterThan(0);
     assertEnvironmentAttributes(resourceAttributes);
-    assertLogzioAttributes(resourceAttributes);
+    assertLogzioHeaders(collector.received.traces[0].headers, {
+      region: 'us-east-1',
+      tracesToken: 'test-traces-token',
+    });
     for (const span of spans) {
       assertSessionAndViewIds(span.attributes);
     }

@@ -75,7 +75,10 @@ describe('metrics provider', () => {
     const resource = createMockResource({ serviceName: 'test-service' });
     const endpoint = 'https://metrics.example.com';
 
-    const provider = getMetricsProvider(resource, endpoint);
+    const provider = getMetricsProvider(resource, endpoint, {
+      region: 'us',
+      tokens: { metrics: 'm' },
+    });
 
     expect(provider).toBeDefined();
     const meterCall = mockConstructCalls.find(([name]) => name === 'MeterProvider');
@@ -91,7 +94,7 @@ describe('metrics provider', () => {
 
   it('should configure view with correct properties', () => {
     const resource = createMockResource();
-    getMetricsProvider(resource, 'https://example.com');
+    getMetricsProvider(resource, 'https://example.com', { region: 'us', tokens: { metrics: 'm' } });
 
     const meterCall = mockConstructCalls.find(([name]) => name === 'MeterProvider');
     const view = meterCall[1].views[0];
@@ -104,7 +107,7 @@ describe('metrics provider', () => {
 
   it('should configure PeriodicExportingMetricReader with correct interval and exporter', () => {
     const resource = createMockResource();
-    getMetricsProvider(resource, 'https://example.com');
+    getMetricsProvider(resource, 'https://example.com', { region: 'us', tokens: { metrics: 'm' } });
 
     const readerCall = mockConstructCalls.find(
       ([name]) => name === 'PeriodicExportingMetricReader',
@@ -123,12 +126,12 @@ describe('metrics provider', () => {
     const resource = createMockResource();
     const endpoint = 'https://metrics.logz.io/v1/metrics';
 
-    getMetricsProvider(resource, endpoint);
+    getMetricsProvider(resource, endpoint, { region: 'us', tokens: { metrics: 'm' } });
 
     const exporterCall = mockConstructCalls.find(([name]) => name === 'OTLPMetricExporter');
     const [, options] = exporterCall;
     expect(options.url).toBe(endpoint);
-    expect(options.headers).toEqual({});
+    expect(options.headers).toEqual({ LOGZIO_REGION: 'us', LOGZIO_METRICS_TOKEN: 'm' });
   });
 
   describe('attributeProcessor', () => {
@@ -140,7 +143,10 @@ describe('metrics provider', () => {
       mockRumContextManager.getCustomAttributes.mockReturnValue({ 'user.id': 'user-789' });
 
       const resource = createMockResource();
-      getMetricsProvider(resource, 'https://example.com');
+      getMetricsProvider(resource, 'https://example.com', {
+        region: 'us',
+        tokens: { metrics: 'm' },
+      });
 
       const meterCall = mockConstructCalls.find(([name]) => name === 'MeterProvider');
       attributeProcessor = meterCall[1].views[0].attributeProcessor;

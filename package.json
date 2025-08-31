@@ -6,11 +6,14 @@
   "publishConfig": {
     "access": "public"
   },
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "directories": {
     "test": "tests"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "postinstall": "npm run build",
     "test": "npm run test:unit && npm run test:integration && npm run test:browser",
     "test:unit": "jest --config tests/unit/jest.config.js tests/unit/",
     "test:integration": "NODE_OPTIONS=--unhandled-rejections=warn jest --config tests/integration/jest.config.js",

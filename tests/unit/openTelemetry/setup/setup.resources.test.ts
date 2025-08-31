@@ -65,9 +65,9 @@ describe('OpenTelemetryProvider Resource Composition', () => {
       const metricsResource = (mockGetMetricsProvider as jest.Mock).mock.calls[0][0];
       const logsResource = (mockGetLogProvider as jest.Mock).mock.calls[0][0];
 
-      expectLogzioAttributes(traceResource, 'eu-west-1', 'trace-123');
-      expectLogzioAttributes(metricsResource, 'eu-west-1', 'metrics-456');
-      expectLogzioAttributes(logsResource, 'eu-west-1', 'logs-789');
+      expectLogzioAttributes(traceResource);
+      expectLogzioAttributes(metricsResource);
+      expectLogzioAttributes(logsResource);
     });
   });
 

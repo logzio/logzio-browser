@@ -9,6 +9,12 @@ import {
   LogRecord,
 } from '../collector/decoders';
 import { RecordedReq } from '../collector/types';
+import {
+  LOGZIO_REGION_HEADER,
+  LOGZIO_TRACES_TOKEN_HEADER,
+  LOGZIO_LOGS_TOKEN_HEADER,
+  LOGZIO_METRICS_TOKEN_HEADER,
+} from '@src/openTelemetry/providers/constants';
 
 export function getPageViewSpan(
   spans: Span[],
@@ -95,10 +101,24 @@ export function assertEnvironmentAttributes(resourceAttributes: Record<string, a
   assertRequiredAttributes(resourceAttributes, expectedEnvAttrs);
 }
 
-export function assertLogzioAttributes(resourceAttributes: Record<string, any>): void {
-  const expectedLogzioAttrs = ['logzio.region', 'logzio.token'];
+export function assertLogzioHeaders(
+  headers: Record<string, string>,
+  expected: { region: string; tracesToken?: string; logsToken?: string; metricsToken?: string },
+): void {
+  // Node lowercases header names
+  const h = Object.fromEntries(
+    Object.entries(headers).map(([k, v]) => [k.toLowerCase(), String(v)]),
+  ) as Record<string, string>;
 
-  assertRequiredAttributes(resourceAttributes, expectedLogzioAttrs);
+  const REGION = LOGZIO_REGION_HEADER.toLowerCase();
+  const TRACES = LOGZIO_TRACES_TOKEN_HEADER.toLowerCase();
+  const LOGS = LOGZIO_LOGS_TOKEN_HEADER.toLowerCase();
+  const METRICS = LOGZIO_METRICS_TOKEN_HEADER.toLowerCase();
+
+  if (expected.region) expect(h[REGION]).toBe(expected.region);
+  if (expected.tracesToken) expect(h[TRACES]).toBe(expected.tracesToken);
+  if (expected.logsToken) expect(h[LOGS]).toBe(expected.logsToken);
+  if (expected.metricsToken) expect(h[METRICS]).toBe(expected.metricsToken);
 }
 
 export function assertSessionAndViewIds(attributes: Record<string, any>): void {

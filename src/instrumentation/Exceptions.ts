@@ -37,7 +37,6 @@ export class ErrorTrackingInstrumentation extends InstrumentationBase {
   }
 
   public enable(): void {
-    super.enable();
     try {
       this.setupErrorTracking();
     } catch (error) {
@@ -46,7 +45,6 @@ export class ErrorTrackingInstrumentation extends InstrumentationBase {
   }
 
   public disable(): void {
-    super.disable();
     try {
       if (this.errorUnsubscribe) {
         this.errorUnsubscribe();

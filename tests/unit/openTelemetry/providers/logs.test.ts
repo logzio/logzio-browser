@@ -90,7 +90,7 @@ describe('logs provider', () => {
     const endpoint = 'https://logs.example.com';
     const resource = new MockResource({ serviceName: 'test-service' });
 
-    const provider = getLogProvider(resource, endpoint);
+    const provider = getLogProvider(resource, endpoint, { region: 'us', tokens: { logs: 't' } });
 
     // Verify LoggerProvider was created
     expect(provider).toBeDefined();
@@ -108,7 +108,7 @@ describe('logs provider', () => {
     const endpoint = 'https://logs.example.com';
     const resource = new MockResource({ serviceName: 'test-service' });
 
-    getLogProvider(resource, endpoint);
+    getLogProvider(resource, endpoint, { region: 'us', tokens: { logs: 't' } });
 
     const loggerCall = mockConstructCalls.find(([name]) => name === 'LoggerProvider');
     const processors = loggerCall[1].processors;
@@ -126,7 +126,7 @@ describe('logs provider', () => {
     const endpoint = 'https://logs.example.com';
     const resource = new MockResource({ serviceName: 'test-service' });
 
-    getLogProvider(resource, endpoint);
+    getLogProvider(resource, endpoint, { region: 'us', tokens: { logs: 't' } });
 
     const batchProcessorCall = mockConstructCalls.find(
       ([name]) => name === 'BatchLogRecordProcessor',
@@ -143,14 +143,14 @@ describe('logs provider', () => {
     const endpoint = 'https://logs.example.com/v1/logs';
     const resource = new MockResource({ serviceName: 'test-service' });
 
-    getLogProvider(resource, endpoint);
+    getLogProvider(resource, endpoint, { region: 'us', tokens: { logs: 't' } });
 
     const exporterCall = mockConstructCalls.find(([name]) => name === 'OTLPLogExporter');
     expect(exporterCall).toBeTruthy();
 
     const [, options] = exporterCall;
     expect(options.url).toBe(endpoint);
-    expect(options.headers).toEqual({});
+    expect(options.headers).toEqual({ LOGZIO_REGION: 'us', LOGZIO_LOGS_TOKEN: 't' });
   });
 
   it('should not throw with various endpoint formats', () => {
@@ -166,8 +166,10 @@ describe('logs provider', () => {
       'http://localhost:3000/api/v1/logs',
     ];
 
-    endpoints.forEach((endpoint) => {
-      expect(() => getLogProvider(resource, endpoint)).not.toThrow();
+    endpoints.forEach((endpoint: string) => {
+      expect(() =>
+        getLogProvider(resource, endpoint, { region: 'us', tokens: { logs: 't' } }),
+      ).not.toThrow();
     });
   });
 
@@ -184,7 +186,7 @@ describe('logs provider', () => {
       // Clear previous calls
       mockConstructCalls.length = 0;
       exporterInstances.length = 0;
-      getLogProvider(resource, endpoint);
+      getLogProvider(resource, endpoint, { region: 'us', tokens: { logs: 't' } });
 
       const exporterCall = mockConstructCalls.find(([name]) => name === 'OTLPLogExporter');
       expect(exporterCall[1].url).toBe(endpoint);
@@ -195,7 +197,7 @@ describe('logs provider', () => {
     const endpoint = 'https://logs.example.com';
     const resource = new MockResource({ serviceName: 'test-service' });
 
-    const provider = getLogProvider(resource, endpoint);
+    const provider = getLogProvider(resource, endpoint, { region: 'us', tokens: { logs: 't' } });
 
     // Should return the mocked LoggerProvider instance
     expect(provider).toBeDefined();
@@ -206,7 +208,7 @@ describe('logs provider', () => {
     const endpoint = 'https://logs.example.com';
     const resource = new MockResource({ serviceName: 'test-service' });
 
-    getLogProvider(resource, endpoint);
+    getLogProvider(resource, endpoint, { region: 'us', tokens: { logs: 't' } });
 
     const sessionProcessorCall = mockConstructCalls.find(
       ([name]) => name === 'SessionContextLogProcessor',
@@ -219,7 +221,7 @@ describe('logs provider', () => {
     const endpoint = 'https://logs.example.com';
     const resource = new MockResource({ serviceName: 'test-service' });
 
-    getLogProvider(resource, endpoint);
+    getLogProvider(resource, endpoint, { region: 'us', tokens: { logs: 't' } });
 
     const exporterCall = mockConstructCalls.find(([name]) => name === 'OTLPLogExporter');
     const batchProcessorCall = mockConstructCalls.find(
