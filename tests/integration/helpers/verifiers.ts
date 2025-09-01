@@ -9,12 +9,7 @@ import {
   LogRecord,
 } from '../collector/decoders';
 import { RecordedReq } from '../collector/types';
-import {
-  LOGZIO_REGION_HEADER,
-  LOGZIO_TRACES_TOKEN_HEADER,
-  LOGZIO_LOGS_TOKEN_HEADER,
-  LOGZIO_METRICS_TOKEN_HEADER,
-} from '@src/openTelemetry/providers/constants';
+import { LOGZIO_REGION_HEADER, AUTHORIZATION_HEADER } from '@src/openTelemetry/providers/constants';
 
 export function getPageViewSpan(
   spans: Span[],
@@ -111,14 +106,13 @@ export function assertLogzioHeaders(
   ) as Record<string, string>;
 
   const REGION = LOGZIO_REGION_HEADER.toLowerCase();
-  const TRACES = LOGZIO_TRACES_TOKEN_HEADER.toLowerCase();
-  const LOGS = LOGZIO_LOGS_TOKEN_HEADER.toLowerCase();
-  const METRICS = LOGZIO_METRICS_TOKEN_HEADER.toLowerCase();
+  const AUTHORIZATION = AUTHORIZATION_HEADER.toLowerCase();
 
   if (expected.region) expect(h[REGION]).toBe(expected.region);
-  if (expected.tracesToken) expect(h[TRACES]).toBe(expected.tracesToken);
-  if (expected.logsToken) expect(h[LOGS]).toBe(expected.logsToken);
-  if (expected.metricsToken) expect(h[METRICS]).toBe(expected.metricsToken);
+
+  if (expected.tracesToken) expect(h[AUTHORIZATION]).toBe(`Bearer ${expected.tracesToken}`);
+  if (expected.logsToken) expect(h[AUTHORIZATION]).toBe(`Bearer ${expected.logsToken}`);
+  if (expected.metricsToken) expect(h[AUTHORIZATION]).toBe(`Bearer ${expected.metricsToken}`);
 }
 
 export function assertSessionAndViewIds(attributes: Record<string, any>): void {

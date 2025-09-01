@@ -122,8 +122,6 @@ export const tracesProviderMocks = {
   '@opentelemetry/resources': createResourceMocks(),
   '@opentelemetry/sdk-trace-web': createTraceWebMocks(),
   '@opentelemetry/exporter-trace-otlp-proto': createOtlpHttpMocks(),
-  '@opentelemetry/exporter-logs-otlp-proto': createOtlpHttpMocks(),
-  '@opentelemetry/exporter-metrics-otlp-proto': createOtlpHttpMocks(),
 };
 
 /**

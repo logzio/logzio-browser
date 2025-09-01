@@ -24,7 +24,7 @@ export class PageViewInstrumentation {
   public startPageViewSpans(sessionId: string, viewId: string): void {
     if (this.activeSpan) this.activeSpan.end();
 
-    this.activeSpan = this.tracer.startSpan(SpanName.NAVIGATION, {
+    this.activeSpan = this.tracer.startSpan(SpanName.PAGE_VIEW, {
       attributes: {
         [ATTR_SESSION_ID]: sessionId,
         [ATTR_VIEW_ID]: viewId,

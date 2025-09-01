@@ -8,11 +8,12 @@ import {
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-proto';
 import { SessionContextLogProcessor } from '../processors';
 import { RUMConfig } from '../../config';
+import { getAuthorizationHeader } from '../../utils/helpers';
 import {
   MAX_BULK_SIZE,
   MAX_LOG_WAIT_MS,
   LOGZIO_REGION_HEADER,
-  LOGZIO_LOGS_TOKEN_HEADER,
+  AUTHORIZATION_HEADER,
 } from './constants';
 
 export function getLogProvider(
@@ -41,7 +42,7 @@ function getLogExporter(endoint: string, config: RUMConfig): LogRecordExporter {
     url: endoint,
     headers: {
       [LOGZIO_REGION_HEADER]: config.region,
-      [LOGZIO_LOGS_TOKEN_HEADER]: config.tokens.logs,
+      [AUTHORIZATION_HEADER]: getAuthorizationHeader(config.tokens.logs),
     },
   });
 }

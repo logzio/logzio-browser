@@ -8,10 +8,11 @@ import {
   ViewOptions as MetricView,
 } from '@opentelemetry/sdk-metrics';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-proto';
+import { getAuthorizationHeader } from '../../utils/helpers';
 import { ATTR_SESSION_ID, ATTR_VIEW_ID } from '../../instrumentation';
 import { rumContextManager } from '../../context/LogzioContextManager';
 import { RUMConfig } from '../../config';
-import { LOGZIO_METRICS_TOKEN_HEADER, LOGZIO_REGION_HEADER, MAX_METRIC_WAIT_MS } from './constants';
+import { AUTHORIZATION_HEADER, LOGZIO_REGION_HEADER, MAX_METRIC_WAIT_MS } from './constants';
 
 export function getMetricsProvider(
   resource: Resource,
@@ -71,7 +72,7 @@ function getMetricsExporter(endoint: string, config: RUMConfig): PushMetricExpor
     url: endoint,
     headers: {
       [LOGZIO_REGION_HEADER]: config.region,
-      [LOGZIO_METRICS_TOKEN_HEADER]: config.tokens.metrics,
+      [AUTHORIZATION_HEADER]: getAuthorizationHeader(config.tokens.metrics),
     },
   });
 }

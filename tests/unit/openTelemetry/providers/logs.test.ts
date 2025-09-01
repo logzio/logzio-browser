@@ -1,9 +1,10 @@
 import {
   LOGZIO_REGION_HEADER,
-  LOGZIO_LOGS_TOKEN_HEADER,
   MAX_BULK_SIZE,
   MAX_LOG_WAIT_MS,
+  AUTHORIZATION_HEADER,
 } from '../../../../src/openTelemetry/providers/constants';
+import { getAuthorizationHeader } from '@src/utils/helpers';
 
 // Track all constructor calls for verification
 const mockConstructCalls: any[] = [];
@@ -157,7 +158,7 @@ describe('logs provider', () => {
     expect(options.url).toBe(endpoint);
     expect(options.headers).toEqual({
       [LOGZIO_REGION_HEADER]: 'us',
-      [LOGZIO_LOGS_TOKEN_HEADER]: 't',
+      [AUTHORIZATION_HEADER]: getAuthorizationHeader('t'),
     });
   });
 

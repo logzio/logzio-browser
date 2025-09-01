@@ -33,3 +33,12 @@ export function getIfMoreThan(value: number | undefined, min: number, fallback: 
 export function generateId(): string {
   return uuidv4();
 }
+
+/**
+ * Generates an authorization header.
+ * @param token - The token to generate the header for.
+ * @returns the authorization header.
+ */
+export function getAuthorizationHeader(token: string): string {
+  return `Bearer ${token}`;
+}

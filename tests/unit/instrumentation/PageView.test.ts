@@ -39,6 +39,7 @@ jest.mock('@src/instrumentation/semconv', () => ({
 }));
 
 import { PageViewInstrumentation } from '@src/instrumentation/PageView';
+import { SpanName } from '@src/instrumentation/semconv';
 
 describe('PageView Instrumentation', () => {
   let pageView: PageViewInstrumentation;
@@ -76,12 +77,12 @@ describe('PageView Instrumentation', () => {
 
     pageView.startPageViewSpans(sessionId, viewId);
 
-    expect(mockTracer.startSpan).toHaveBeenCalledWith('navigation', {
+    expect(mockTracer.startSpan).toHaveBeenCalledWith(SpanName.PAGE_VIEW, {
       attributes: {
         'session.id': sessionId,
         'view.id': viewId,
-        'user_interaction.event_type': 'navigation',
-        'http.url': expect.any(String), // Don't assert exact URL, just that it's included
+        'user_interaction.event_type': SpanName.NAVIGATION,
+        'http.url': expect.any(String),
       },
     });
   });

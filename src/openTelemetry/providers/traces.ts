@@ -13,13 +13,14 @@ import {
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
 import { RUMConfig } from '../../config';
 import { FrustrationDetectionProcessor, SessionContextSpanProcessor } from '../processors';
+import { getAuthorizationHeader } from '../../utils/helpers';
 import {
   MAX_SAMPLING_PERCENTAGE,
   MIN_SAMPLING_PERCENTAGE,
   MAX_BULK_SIZE,
   MAX_SPAN_WAIT_MS,
   LOGZIO_REGION_HEADER,
-  LOGZIO_TRACES_TOKEN_HEADER,
+  AUTHORIZATION_HEADER,
 } from './constants';
 
 export function getTraceProvider(
@@ -60,7 +61,7 @@ function getTraceExporter(endoint: string, config: RUMConfig): SpanExporter {
     url: endoint,
     headers: {
       [LOGZIO_REGION_HEADER]: config.region,
-      [LOGZIO_TRACES_TOKEN_HEADER]: config.tokens.traces,
+      [AUTHORIZATION_HEADER]: getAuthorizationHeader(config.tokens.traces),
     },
   });
 }

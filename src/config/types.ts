@@ -23,7 +23,6 @@ export interface RUMConfigOptions {
     webVitals?: boolean; // FCP, LCP, TTFB, CLS, FID, TTI
     viewEvents?: boolean; // view end event containing the duration to indicate the session state
     consoleLogs?: boolean; // console logs instrumentation flag
-    // sessionReplay?: boolean; // DOM recording, user interactions  // consider doing this in future version
   };
   environmentData?: {
     collectOS?: boolean; // operating system name, version, type

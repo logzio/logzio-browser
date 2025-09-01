@@ -46,5 +46,6 @@ export const enum SpanName {
   APP_EXCEPTION = 'app.exception',
   RUM_EXCEPTION = 'rum.exception',
   NAVIGATION = 'navigation',
+  PAGE_VIEW = 'page_view',
   CLICK = 'click',
 }
