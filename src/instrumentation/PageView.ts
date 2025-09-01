@@ -1,4 +1,4 @@
-import { Tracer, Span, trace } from '@opentelemetry/api';
+import { Tracer, Span, trace, ROOT_CONTEXT } from '@opentelemetry/api';
 import { AttributeNames as otelAttributeNames } from '@opentelemetry/instrumentation-user-interaction';
 import { LOGZIO_RUM_PROVIDER_NAME } from '../shared';
 import { rumContextManager } from '../context/LogzioContextManager';
@@ -24,14 +24,18 @@ export class PageViewInstrumentation {
   public startPageViewSpans(sessionId: string, viewId: string): void {
     if (this.activeSpan) this.activeSpan.end();
 
-    this.activeSpan = this.tracer.startSpan(SpanName.PAGE_VIEW, {
-      attributes: {
-        [ATTR_SESSION_ID]: sessionId,
-        [ATTR_VIEW_ID]: viewId,
-        [otelAttributeNames.EVENT_TYPE]: SpanName.NAVIGATION,
-        [otelAttributeNames.HTTP_URL]: window.location.href,
+    this.activeSpan = this.tracer.startSpan(
+      SpanName.PAGE_VIEW,
+      {
+        attributes: {
+          [ATTR_SESSION_ID]: sessionId,
+          [ATTR_VIEW_ID]: viewId,
+          [otelAttributeNames.EVENT_TYPE]: SpanName.NAVIGATION,
+          [otelAttributeNames.HTTP_URL]: window.location.href,
+        },
       },
-    });
+      ROOT_CONTEXT,
+    );
 
     // Use the context manager to set the page view context globally
     rumContextManager.setPageViewContext(this.activeSpan, sessionId, viewId);

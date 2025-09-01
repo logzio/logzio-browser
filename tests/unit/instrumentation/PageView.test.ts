@@ -77,13 +77,17 @@ describe('PageView Instrumentation', () => {
 
     pageView.startPageViewSpans(sessionId, viewId);
 
-    expect(mockTracer.startSpan).toHaveBeenCalledWith(SpanName.PAGE_VIEW, {
-      attributes: {
-        'session.id': sessionId,
-        'view.id': viewId,
-        'user_interaction.event_type': SpanName.NAVIGATION,
-        'http.url': expect.any(String),
-      },
+    // Verify startSpan was called with correct name and attributes
+    expect(mockTracer.startSpan).toHaveBeenCalledTimes(1);
+
+    // Check the first two parameters (name and options)
+    const [name, options] = mockTracer.startSpan.mock.calls[0];
+    expect(name).toBe(SpanName.PAGE_VIEW);
+    expect(options.attributes).toEqual({
+      'session.id': sessionId,
+      'view.id': viewId,
+      'user_interaction.event_type': SpanName.NAVIGATION,
+      'http.url': expect.any(String),
     });
   });
 
