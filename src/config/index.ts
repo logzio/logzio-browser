@@ -69,7 +69,6 @@ export class RUMConfig {
       webVitals: config.enable?.webVitals ?? DEFAULT_ENABLE_STATE,
       viewEvents: config.enable?.viewEvents ?? DEFAULT_DISABLE_STATE,
       consoleLogs: config.enable?.consoleLogs ?? DEFAULT_DISABLE_STATE,
-      // sessionReplay: config.enable?.sessionReplay ?? DEFAULT_DISABLE_STATE,
     };
     this.environmentData = {
       collectOS: config.environmentData?.collectOS ?? DEFAULT_ENABLE_STATE,
