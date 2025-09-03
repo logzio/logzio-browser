@@ -1,11 +1,4 @@
-import {
-  Context,
-  ContextManager,
-  ROOT_CONTEXT,
-  createContextKey,
-  trace,
-  Span,
-} from '@opentelemetry/api';
+import { Context, ContextManager, ROOT_CONTEXT, createContextKey } from '@opentelemetry/api';
 import { rumLogger } from '../shared';
 
 /**
@@ -15,7 +8,6 @@ import { rumLogger } from '../shared';
 export class LogzioContextManager implements ContextManager {
   private readonly SESSION_ID_KEY = createContextKey('logzio.rum.session_id');
   private readonly VIEW_ID_KEY = createContextKey('logzio.rum.view_id');
-  private readonly PAGE_VIEW_SPAN_KEY = createContextKey('logzio.rum.page_view_span');
   private readonly CUSTOM_ATTRIBUTES_KEY = createContextKey('logzio.rum.custom_attributes');
 
   private _currentContext: Context = ROOT_CONTEXT;
@@ -49,7 +41,7 @@ export class LogzioContextManager implements ContextManager {
     ...args: A
   ): ReturnType<F> {
     const previousContext = this._currentContext;
-    this._currentContext = context;
+    this._currentContext = context || ROOT_CONTEXT;
     try {
       return fn.apply(thisArg, args);
     } finally {
@@ -113,22 +105,19 @@ export class LogzioContextManager implements ContextManager {
   }
 
   /**
-   * Sets the page view context with span, session ID, view ID, and custom attributes.
+   * Sets the current session/view context with session ID, view ID, and custom attributes.
+   * Used by views to update the context for all future spans.
    */
-  public setPageViewContext(span: Span, sessionId: string, viewId: string): void {
-    // First, build the RUM context with session, view, and custom data
-    let context = ROOT_CONTEXT;
-    context = context.setValue(this.SESSION_ID_KEY, sessionId);
-    context = context.setValue(this.VIEW_ID_KEY, viewId);
-    context = context.setValue(this.PAGE_VIEW_SPAN_KEY, span);
+  public setViewContext(sessionId: string, viewId: string): void {
+    let ctx = ROOT_CONTEXT;
+    ctx = ctx.setValue(this.SESSION_ID_KEY, sessionId);
+    ctx = ctx.setValue(this.VIEW_ID_KEY, viewId);
 
-    // Add custom attributes
     if (Object.keys(this._customAttributes).length > 0) {
-      context = context.setValue(this.CUSTOM_ATTRIBUTES_KEY, { ...this._customAttributes });
+      ctx = ctx.setValue(this.CUSTOM_ATTRIBUTES_KEY, { ...this._customAttributes });
     }
 
-    // Then, set the active span on this RUM-enriched context
-    this._currentContext = trace.setSpan(context, span);
+    this._currentContext = ctx;
   }
 
   public getSessionId(context: Context = this._currentContext): string | undefined {
@@ -148,6 +137,7 @@ export class LogzioContextManager implements ContextManager {
   /**
    * Sets custom attributes that will be applied to all future spans and logs.
    * Replaces the entire custom attributes map.
+   * Note: This only affects future spans - existing spans are not modified.
    */
   public setCustomAttributes(attributes: Record<string, any>): void {
     this._customAttributes = { ...this.flattenObject(attributes) };
@@ -184,39 +174,41 @@ export class LogzioContextManager implements ContextManager {
         options?: boolean | AddEventListenerOptions,
       ) {
         if (listener && typeof listener === 'function') {
-          // Capture the current context when listener is registered
+          // Use call-time context instead of schedule-time context
           const manager = LogzioContextManager.getInstance();
-          const activeContext = manager.active();
-          const boundListener = manager.bind(activeContext, listener);
+          const wrappedListener = function (this: any, ...evArgs: any[]) {
+            // Get current active context at event execution time
+            return manager.with(manager.active(), listener as any, this, ...evArgs);
+          };
 
           // Store mapping for removeEventListener
-          manager._listenerMap.set(listener, boundListener);
+          manager._listenerMap.set(listener, wrappedListener);
 
-          return originalAddEventListener.call(this, type, boundListener, options);
+          return originalAddEventListener.call(this, type, wrappedListener, options);
         } else if (
           listener &&
           typeof listener === 'object' &&
           typeof (listener as EventListenerObject).handleEvent === 'function'
         ) {
-          // Handle EventListenerObject case, preserve original 'this'
+          // Handle EventListenerObject case with call-time context
           const manager = LogzioContextManager.getInstance();
-          const activeContext = manager.active();
           const originalObj = listener as EventListenerObject;
 
-          const boundFn = function (this: any, ...evArgs: any[]) {
+          const wrappedFn = function (this: any, ...evArgs: any[]) {
+            // Get current active context at event execution time
             const fn = originalObj.handleEvent.bind(originalObj);
-            return manager.with(activeContext, fn as any, this, ...evArgs);
+            return manager.with(manager.active(), fn as any, this, ...evArgs);
           };
 
           manager._listenerMap.set(
             originalObj as unknown as EventListener,
-            boundFn as unknown as EventListener,
+            wrappedFn as unknown as EventListener,
           );
 
           return originalAddEventListener.call(
             this,
             type,
-            boundFn as unknown as EventListener,
+            wrappedFn as unknown as EventListener,
             options,
           );
         }
@@ -264,10 +256,12 @@ export class LogzioContextManager implements ContextManager {
         this._originals.push(restore);
 
         (globalThis as any)[methodName] = (...args: any[]) => {
-          // <-- Use an arrow function here
           const [callback, ...restArgs] = args;
-          const boundCallback = this.bind(this.active(), callback);
-          return original(boundCallback, ...restArgs);
+          // Use call-time context instead of schedule-time context
+          const wrappedCallback = (...cbArgs: any[]) => {
+            return this.with(this.active(), callback, undefined, ...cbArgs);
+          };
+          return original(wrappedCallback, ...restArgs);
         };
       } catch (error) {
         rumLogger.error(`Failed to patch ${methodName}`, error);
@@ -289,8 +283,11 @@ export class LogzioContextManager implements ContextManager {
       this._originals.push(restore);
 
       globalThis.requestAnimationFrame = (callback: FrameRequestCallback): number => {
-        const boundCallback = this.bind(this.active(), callback);
-        return original(boundCallback);
+        // Use call-time context instead of schedule-time context
+        const wrappedCallback = (time: DOMHighResTimeStamp) => {
+          return this.with(this.active(), callback, undefined, time);
+        };
+        return original(wrappedCallback);
       };
     } catch (error) {
       rumLogger.error('Failed to patch requestAnimationFrame', error);
@@ -301,14 +298,13 @@ export class LogzioContextManager implements ContextManager {
    * Helper to update active context when attributes change.
    */
   private updateActiveContext(): void {
-    if (this._currentContext === ROOT_CONTEXT) return;
+    if (this._currentContext !== ROOT_CONTEXT) {
+      const sessionId = this.getSessionId(this._currentContext);
+      const viewId = this.getViewId(this._currentContext);
 
-    const currentSpan = trace.getActiveSpan();
-    const sessionId = this.getSessionId(this._currentContext);
-    const viewId = this.getViewId(this._currentContext);
-
-    if (currentSpan && sessionId && viewId) {
-      this.setPageViewContext(currentSpan, sessionId, viewId);
+      if (sessionId && viewId) {
+        this.setViewContext(sessionId, viewId);
+      }
     }
   }
 

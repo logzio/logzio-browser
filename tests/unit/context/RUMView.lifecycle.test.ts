@@ -25,16 +25,12 @@ jest.mock('@src/utils', () => ({
   generateId: jest.fn(() => 'view-123'),
 }));
 
-jest.mock('@src/instrumentation', () => {
-  const PageViewInstrumentation = jest.fn().mockImplementation(() => ({
-    startPageViewSpans: jest.fn(),
-    endPageViewSpan: jest.fn(),
-  }));
-  return {
-    PageViewInstrumentation,
-    ATTR_URL: 'url.path',
-  };
-});
+// Mock the context manager
+jest.mock('@src/context/LogzioContextManager', () => ({
+  rumContextManager: {
+    setViewContext: jest.fn(),
+  },
+}));
 
 jest.mock('@src/aggregations/WebVitalsAggregator', () => ({
   WebVitalsAggregator: jest.fn().mockImplementation(() => ({
@@ -70,7 +66,7 @@ describe('RUMView lifecycle and events', () => {
     ...(overrides || {}),
   });
 
-  it('should initialize page view spans and metric aggregation in start() and flush and finish in end()', () => {
+  it('should apply view context and initialize metric aggregation in start() and flush in end()', () => {
     const config = createConfig();
     const view = new RUMView('sess-1', config as any);
 
@@ -79,10 +75,8 @@ describe('RUMView lifecycle and events', () => {
     jest.advanceTimersByTime(2_000);
     view.end();
 
-    const { PageViewInstrumentation } = require('@src/instrumentation');
-    const pageViewInstance = (PageViewInstrumentation as jest.Mock).mock.results[0].value;
-    expect(pageViewInstance.startPageViewSpans).toHaveBeenCalledWith('sess-1', 'view-123');
-    expect(pageViewInstance.endPageViewSpan).toHaveBeenCalled();
+    const { rumContextManager } = require('@src/context/LogzioContextManager');
+    expect(rumContextManager.setViewContext).toHaveBeenCalledWith('sess-1', 'view-123');
 
     const { WebVitalsAggregator } = require('@src/aggregations/WebVitalsAggregator');
     const aggregatorInstance = (WebVitalsAggregator as jest.Mock).mock.results[0].value;
@@ -91,7 +85,7 @@ describe('RUMView lifecycle and events', () => {
     expect(aggregatorInstance.flushMetrics).toHaveBeenCalled();
   });
 
-  it('should emit view_end event with expected attributes when viewEvents enabled', () => {
+  it('should emit view_start and view_end events with expected attributes when viewEvents enabled', () => {
     const config = createConfig();
     const view = new RUMView('sess-9', config as any);
 
@@ -100,14 +94,22 @@ describe('RUMView lifecycle and events', () => {
     view.end();
 
     const emitMock = (logs.getLogger as jest.Mock).mock.results[0].value.emit as jest.Mock;
-    expect(emitMock).toHaveBeenCalledTimes(1);
+    expect(emitMock).toHaveBeenCalledTimes(2);
 
-    const event = emitMock.mock.calls[0][0];
-    expect(event.severityText).toBe('INFO');
-    expect(typeof event.body).toBe('string');
-    expect(event.attributes['url.path']).toBe(window.location.href);
-    expect(typeof event.attributes.duration).toBe('number');
-    expect(event.attributes['event.type']).toBe('view_end');
+    // Check view_start event
+    const startEvent = emitMock.mock.calls[0][0];
+    expect(startEvent.severityText).toBe('INFO');
+    expect(typeof startEvent.body).toBe('string');
+    expect(startEvent.attributes['url.path']).toBe(window.location.href);
+    expect(startEvent.attributes['event.type']).toBe('view_start');
+
+    // Check view_end event
+    const endEvent = emitMock.mock.calls[1][0];
+    expect(endEvent.severityText).toBe('INFO');
+    expect(typeof endEvent.body).toBe('string');
+    expect(endEvent.attributes['url.path']).toBe(window.location.href);
+    expect(typeof endEvent.attributes.duration).toBe('number');
+    expect(endEvent.attributes['event.type']).toBe('view_end');
   });
 
   it('should not emit event when viewEvents disabled', () => {
@@ -132,7 +134,7 @@ describe('RUMView lifecycle and events', () => {
     expect(WebVitalsAggregator).not.toHaveBeenCalled();
 
     const emitMock = (logs.getLogger as jest.Mock).mock.results[0].value.emit as jest.Mock;
-    expect(emitMock).toHaveBeenCalledTimes(1);
+    expect(emitMock).toHaveBeenCalledTimes(2); // view_start and view_end
   });
 
   it('should emit with zero duration when viewEvents enabled in end() before start()', () => {

@@ -75,15 +75,14 @@ describe('LogzioContextManager context and attributes', () => {
     });
   });
 
-  it('should set active context with all values in setPageViewContext', () => {
-    const mockSpan = { spanId: 'test-span' };
+  it('should set active context with all values in setViewContext', () => {
     const sessionId = 'session-123';
     const viewId = 'view-456';
 
     // Set some custom attributes first
     manager.setInitialCustomAttributes({ 'app.version': '1.0.0' });
 
-    manager.setPageViewContext(mockSpan as any, sessionId, viewId);
+    manager.setViewContext(sessionId, viewId);
 
     expect(mockContext.setValue).toHaveBeenCalledWith(
       expect.any(Symbol), // SESSION_ID_KEY
@@ -93,39 +92,34 @@ describe('LogzioContextManager context and attributes', () => {
       expect.any(Symbol), // VIEW_ID_KEY
       viewId,
     );
-    expect(mockContext.setValue).toHaveBeenCalledWith(
-      expect.any(Symbol), // PAGE_VIEW_SPAN_KEY
-      mockSpan,
-    );
-    expect(mockTrace.setSpan).toHaveBeenCalledWith(expect.any(Object), mockSpan);
+    // No longer sets PAGE_VIEW_SPAN_KEY or calls setSpan
   });
 
-  it('should update active context when span exists in setCustomAttributes', () => {
-    const mockSpan = { spanId: 'active-span' };
-    mockTrace.getActiveSpan.mockReturnValue(mockSpan);
-
+  it('should store custom attributes and update active context in setCustomAttributes', () => {
     // Set up existing context
-    manager.setPageViewContext(mockSpan as any, 'session-1', 'view-1');
+    manager.setViewContext('session-1', 'view-1');
 
-    // Spy on setPageViewContext to see if it gets called again
-    const setPageViewSpy = jest.spyOn(manager, 'setPageViewContext');
+    // Clear any previous calls and spy on setViewContext
+    const setViewContextSpy = jest.spyOn(manager, 'setViewContext');
+    setViewContextSpy.mockClear(); // Clear the initial call
 
     manager.setCustomAttributes({ 'new.attr': 'new-value' });
 
-    expect(setPageViewSpy).toHaveBeenCalledWith(mockSpan, 'test-session', 'test-view');
+    // setViewContext should be called to update context with new attributes
+    // Note: The mock context returns hardcoded values, so we expect those values
+    expect(setViewContextSpy).toHaveBeenCalledWith('test-session', 'test-view');
     expect(manager.getCurrentCustomAttributes()).toEqual({ 'new.attr': 'new-value' });
   });
 
   it('should be no-op when context is ROOT_CONTEXT in setCustomAttributes', () => {
     // Reset to ROOT_CONTEXT
     (manager as any)._currentContext = mockContext; // This represents ROOT_CONTEXT in our mock
-    mockTrace.getActiveSpan.mockReturnValue(undefined);
 
-    const setPageViewSpy = jest.spyOn(manager, 'setPageViewContext');
+    const setViewContextSpy = jest.spyOn(manager, 'setViewContext');
 
     manager.setCustomAttributes({ 'test.attr': 'value' });
 
-    expect(setPageViewSpy).not.toHaveBeenCalled();
+    expect(setViewContextSpy).not.toHaveBeenCalled();
     expect(manager.getCurrentCustomAttributes()).toEqual({ 'test.attr': 'value' });
   });
 

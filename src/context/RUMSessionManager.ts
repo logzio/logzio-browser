@@ -4,6 +4,7 @@ import { EventListener, DOM_EVENT, ACTIVITY_EVENTS, rumLogger } from '../shared'
 import { OpenTelemetryProvider } from '../openTelemetry/setup';
 import { NavigationEventType, NavigationTracker } from '../instrumentation/trackers';
 import { RUMView } from './RUMView';
+import type { ActiveViewInfo } from './types';
 
 /**
  * This class represents the session manager for the RUM.
@@ -289,6 +290,43 @@ export class RUMSessionManager {
     return this.startTime
             ? Date.now() - this.startTime
             : 0;
+  }
+
+  /**
+   * Returns the current active view information as an immutable snapshot.
+   * @returns The active view info or null if no view is active.
+   */
+  public getActiveView(): ActiveViewInfo | null {
+    if (!this.view) {
+      return null;
+    }
+
+    return {
+      id: this.view.getViewId(),
+      url: this.view.getUrl(),
+      startedAt: this.view.getStartTime() || Date.now(),
+      durationMs: this.view.getDuration(),
+    };
+  }
+
+  /**
+   * Returns the view that was active at a specific timestamp.
+   * For now, this returns the current view if it covers the timestamp,
+   * or null otherwise. Future enhancement could maintain a view timeline.
+   * @param timestamp - The timestamp to check (milliseconds since epoch)
+   * @returns The view info that was active at the timestamp, or null if no view is active.
+   */
+  public getActiveViewAt(timestamp: number): ActiveViewInfo | null {
+    const currentView = this.getActiveView();
+    if (!currentView) {
+      return null;
+    }
+
+    if (timestamp >= currentView.startedAt) {
+      return currentView;
+    }
+
+    return null;
   }
 
   /**

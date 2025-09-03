@@ -4,6 +4,10 @@ import { RUMConfig } from '../../config';
 import { rumLogger, LOGZIO_RUM_PROVIDER_NAME } from '../../shared';
 import {
   ATTR_FRUSTRATION_TYPE,
+  ATTR_FRUSTRATION_DEAD_CLICK,
+  ATTR_FRUSTRATION_ERROR_CLICK,
+  ATTR_FRUSTRATION_HEAVY_LOAD,
+  ATTR_FRUSTRATION_RAGE_CLICK,
   ATTR_SESSION_ID,
   ATTR_VIEW_ID,
   FrustrationType,
@@ -71,6 +75,8 @@ export class FrustrationDetectionProcessor implements SpanProcessor {
     const frustrationTypes = span.attributes[ATTR_FRUSTRATION_TYPE];
 
     if (frustrationTypes) {
+      this.normalizeFrustrationAttributes(span, frustrationTypes);
+
       const viewId = this.getViewIdFromSpan(span);
       const sessionId = this.getSessionIdFromSpan(span);
 
@@ -83,6 +89,32 @@ export class FrustrationDetectionProcessor implements SpanProcessor {
         }
       });
     }
+  }
+
+  /**
+   * Normalizes the frustration types to separate attributes since Jaegar doesn't support arrays for tags.
+   * Also deletes the original frustration type attribute.
+   * @param span - The span to normalize the frustration attributes for.
+   * @param frustrationTypes - The frustration types to normalize.
+   */
+  private normalizeFrustrationAttributes(span: ReadableSpan, frustrationTypes: any): void {
+    frustrationTypes.forEach((frustrationType: any) => {
+      switch (frustrationType) {
+        case FrustrationType.DEAD_CLICK:
+          span.attributes[ATTR_FRUSTRATION_DEAD_CLICK] = true;
+          break;
+        case FrustrationType.ERROR_CLICK:
+          span.attributes[ATTR_FRUSTRATION_ERROR_CLICK] = true;
+          break;
+        case FrustrationType.HEAVY_LOAD:
+          span.attributes[ATTR_FRUSTRATION_HEAVY_LOAD] = true;
+          break;
+        case FrustrationType.RAGE_CLICK:
+          span.attributes[ATTR_FRUSTRATION_RAGE_CLICK] = true;
+          break;
+      }
+    });
+    delete span.attributes[ATTR_FRUSTRATION_TYPE];
   }
 
   private processNavigationSpan(span: ReadableSpan): void {

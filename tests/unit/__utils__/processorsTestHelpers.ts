@@ -42,7 +42,9 @@ export const createMockSpan = (overrides: any = {}) => ({
     ...overrides.attributes,
   },
   duration: [1, 0], // 1 second
+  startTime: [Math.floor(Date.now() / 1000), (Date.now() % 1000) * 1000000], // [seconds, nanoseconds]
   parentSpanId: 'parent-span-id',
+  name: 'test-span', // Add span name
   setAttribute: jest.fn(),
   setAttributes: jest.fn(),
   ...overrides,

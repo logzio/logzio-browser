@@ -8,6 +8,10 @@ export const ATTR_CUSTOM_ATTRIBUTES = 'custom.attributes';
 
 /* Frustration attributes */
 export const ATTR_FRUSTRATION_TYPE = 'frustration.type';
+export const ATTR_FRUSTRATION_DEAD_CLICK = 'frustration.dead_click';
+export const ATTR_FRUSTRATION_RAGE_CLICK = 'frustration.rage_click';
+export const ATTR_FRUSTRATION_HEAVY_LOAD = 'frustration.heavy_load';
+export const ATTR_FRUSTRATION_ERROR_CLICK = 'frustration.error_click';
 export const ATTR_FRUSTRATION_RAGE_CLICKS_COUNT = 'frustration.rage_clicks_count';
 
 /* Frustration types */

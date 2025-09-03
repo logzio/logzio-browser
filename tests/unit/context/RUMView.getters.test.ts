@@ -10,13 +10,11 @@ jest.mock('@opentelemetry/api-logs', () => ({
 // Use centralized utils mock
 jest.mock('@src/utils', () => createGenerateIdOnlyMock('view-xyz'));
 
-jest.mock('@src/instrumentation', () => ({
-  PageViewInstrumentation: jest.fn().mockImplementation(() => ({
-    startPageViewSpans: jest.fn(),
-    endPageViewSpan: jest.fn(),
-  })),
-  // Import actual constants instead of mocking them
-  ...jest.requireActual('@src/instrumentation'),
+// Mock the context manager
+jest.mock('@src/context/LogzioContextManager', () => ({
+  rumContextManager: {
+    setViewContext: jest.fn(),
+  },
 }));
 
 jest.mock('@src/aggregations/WebVitalsAggregator', () => ({

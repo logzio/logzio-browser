@@ -8,7 +8,6 @@ import {
   mockGetMetricsProvider,
   mockGetLogProvider,
   mockGetContextManagerInstance,
-  mockSetGlobalContextManager,
   mockSetGlobalMeterProvider,
   mockSetGlobalLoggerProvider,
 } from '../../__utils__/otelMocks';
@@ -38,7 +37,12 @@ describe('OpenTelemetryProvider Registration', () => {
         'custom.attr': 'value',
       });
       expect(mockContextManager.enable).toHaveBeenCalledTimes(1);
-      expect(mockSetGlobalContextManager).toHaveBeenCalledWith(mockContextManager);
+      // Get the mock instance that was actually used
+      expect(mockGetTraceProvider).toHaveBeenCalled();
+      const traceProviderMock = mockGetTraceProvider.mock.results[0].value;
+      expect(traceProviderMock.register).toHaveBeenCalledWith({
+        contextManager: mockContextManager,
+      });
     });
   });
 

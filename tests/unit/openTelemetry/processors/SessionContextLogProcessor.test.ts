@@ -16,12 +16,24 @@ const { rumContextManager: mockContextManager } = require('@src/context/LogzioCo
 
 describe('SessionContextLogProcessor', () => {
   let processor: SessionContextLogProcessor;
+  let mockSessionManager: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
     processor = new SessionContextLogProcessor();
 
-    // Default mock returns
+    // Create mock session manager
+    mockSessionManager = {
+      getSessionId: jest.fn().mockReturnValue('test-session-id'),
+      getActiveView: jest
+        .fn()
+        .mockReturnValue({ id: 'test-view-id', url: 'http://test.com', startedAt: Date.now() }),
+    };
+
+    // Set the session manager on the processor
+    processor.setSessionManager(mockSessionManager);
+
+    // Default mock returns for context manager
     mockContextManager.getSessionId.mockReturnValue('test-session-id');
     mockContextManager.getViewId.mockReturnValue('test-view-id');
     mockContextManager.getCustomAttributes.mockReturnValue({ 'user.id': 'user-123' });
@@ -69,9 +81,14 @@ describe('SessionContextLogProcessor', () => {
     expect(mockLogRecord.setAttribute).toHaveBeenCalledWith('user.id', 'user-123');
   });
 
-  it('should handle context values correctly', () => {
-    mockContextManager.getSessionId.mockReturnValue('custom-session');
-    mockContextManager.getViewId.mockReturnValue('custom-view');
+  it('should handle session manager values correctly', () => {
+    // Mock session manager instead of context manager
+    mockSessionManager.getSessionId.mockReturnValue('custom-session');
+    mockSessionManager.getActiveView.mockReturnValue({
+      id: 'custom-view',
+      url: 'http://test.com',
+      startedAt: Date.now(),
+    });
     mockContextManager.getCustomAttributes.mockReturnValue({
       'metric.value': 42,
       'flag.enabled': true,
@@ -90,9 +107,10 @@ describe('SessionContextLogProcessor', () => {
     expect(mockLogRecord.setAttribute).toHaveBeenCalledWith('flag.enabled', 'true');
   });
 
-  it('should handle undefined context values gracefully', () => {
-    mockContextManager.getSessionId.mockReturnValue(undefined);
-    mockContextManager.getViewId.mockReturnValue(undefined);
+  it('should handle undefined session manager values gracefully', () => {
+    // Mock session manager to return undefined values
+    mockSessionManager.getSessionId.mockReturnValue(undefined);
+    mockSessionManager.getActiveView.mockReturnValue(null);
     mockContextManager.getCustomAttributes.mockReturnValue(undefined);
 
     const mockLogRecord = {

@@ -39,7 +39,7 @@ export class LogzioRUM {
       rumLogger.debug('Initializing LogzioRUM');
       const openTelemetryProvider = OpenTelemetryProvider.getInstance(this.config);
       openTelemetryProvider.registerProviders();
-      this.startSession();
+      this.startSession(openTelemetryProvider);
       openTelemetryProvider.registerInstrumentations(NavigationTracker.getInstance());
       rumLogger.info('LogzioRUM initialized');
     } catch (error) {
@@ -53,11 +53,12 @@ export class LogzioRUM {
   }
 
   /**
-   * Starts the session.
+   * Starts the session and wires the session manager to the opentelemetry processors.
    */
-  private startSession(): void {
+  private startSession(openTelemetryProvider: OpenTelemetryProvider): void {
     LogzioRUM.session = new RUMSessionManager(this.config);
     LogzioRUM.session.start(NavigationTracker.getInstance());
+    openTelemetryProvider.setSessionManager(LogzioRUM.session);
   }
 
   /**
@@ -92,6 +93,14 @@ export class LogzioRUM {
 
     const contextManager = LogzioContextManager.getInstance();
     contextManager.setCustomAttributes(attributes);
+  }
+
+  /**
+   * Gets the current session manager instance.
+   * @returns The session manager or null if not initialized.
+   */
+  public static getSession(): RUMSessionManager | null {
+    return LogzioRUM.session;
   }
 
   /**

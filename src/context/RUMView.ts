@@ -4,23 +4,22 @@ import { ATTR_URL_PATH } from '@opentelemetry/semantic-conventions';
 import { WebVitalsAggregator } from '../aggregations/WebVitalsAggregator';
 import type { RUMConfig } from '../config';
 import { generateId } from '../utils';
-import { PageViewInstrumentation } from '../instrumentation';
 import { OpenTelemetryProvider } from '../openTelemetry/setup';
 import { LOGZIO_RUM_PROVIDER_NAME, rumLogger } from '../shared';
+import { rumContextManager } from './LogzioContextManager';
 
 /**
  * This class represents a view for the RUM.
- * It starts and ends page views, and starts a new parent page view trace
- * when a navigation event occurs.
+ * It manages view lifecycle through context updates and log events.
  */
 export class RUMView {
   private static readonly VIEW_END_EVENT_NAME = 'view_end';
+  private static readonly VIEW_START_EVENT_NAME = 'view_start';
 
   private viewId: string;
   private url: string;
   private startTime: number | null = null;
   private aggregator: WebVitalsAggregator | null = null;
-  private pageView: PageViewInstrumentation | null = null;
   private logsProvider: Logger = logs.getLogger(LOGZIO_RUM_PROVIDER_NAME);
 
   constructor(
@@ -37,7 +36,8 @@ export class RUMView {
   public start(): void {
     rumLogger.debug(`Starting view ${this.viewId}.`);
     this.startTime = Date.now();
-    this.startInstrumentations();
+    rumContextManager.setViewContext(this.sessionId, this.viewId);
+    this.generateStartEvent();
     this.startMetricAggregation();
   }
 
@@ -48,15 +48,23 @@ export class RUMView {
     rumLogger.debug(`Ending view ${this.viewId}.`);
     this.aggregator?.flushMetrics();
     this.generateEndEvent();
-    this.pageView?.endPageViewSpan();
   }
 
   /**
-   * Starts the page view instrumentation.
+   * Generates a start event to indicate the view has started.
    */
-  private startInstrumentations(): void {
-    this.pageView = new PageViewInstrumentation();
-    this.pageView.startPageViewSpans(this.sessionId, this.viewId);
+  private generateStartEvent(): void {
+    if (this.config.enable?.viewEvents) {
+      this.logsProvider.emit({
+        severityText: 'INFO',
+        body: `view ${this.viewId} started in session ${this.sessionId}`,
+        attributes: {
+          [ATTR_URL_PATH]: this.url,
+          startTime: this.startTime,
+          [otelAttributeNames.EVENT_TYPE]: RUMView.VIEW_START_EVENT_NAME,
+        },
+      });
+    }
   }
 
   /**
@@ -102,6 +110,14 @@ export class RUMView {
    */
   public getUrl(): string {
     return this.url;
+  }
+
+  /**
+   * Returns the start time of the view.
+   * @returns The start time in milliseconds since epoch, or null if not started.
+   */
+  public getStartTime(): number | null {
+    return this.startTime;
   }
 
   /**

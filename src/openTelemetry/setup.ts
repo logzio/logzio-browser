@@ -5,7 +5,7 @@ import type { Resource } from '@opentelemetry/resources';
 import { emptyResource, resourceFromAttributes } from '@opentelemetry/resources';
 import { MeterProvider } from '@opentelemetry/sdk-metrics';
 import { LoggerProvider } from '@opentelemetry/sdk-logs';
-import { metrics, context } from '@opentelemetry/api';
+import { context, metrics } from '@opentelemetry/api';
 import { logs } from '@opentelemetry/api-logs';
 import { DocumentLoadInstrumentation } from '@opentelemetry/instrumentation-document-load';
 import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch';
@@ -19,7 +19,7 @@ import {
 import { NavigationTracker } from '../instrumentation/trackers';
 import { LogzioContextManager } from '../context/LogzioContextManager';
 import { EnvironmentCollector } from '../utils';
-import { rumLogger } from '../shared';
+import { rumLogger, SessionManager } from '../shared';
 import { getMetricsProvider, getLogProvider, getTraceProvider } from './providers';
 
 const enum DataType {
@@ -87,18 +87,23 @@ export class OpenTelemetryProvider {
    */
   public registerProviders(): void {
     rumLogger.debug('Registering OpenTelemetry providers');
-    this.registerContextManager();
+    const contextManager = this.setupContextManager();
 
-    this.traceProvider.register();
+    // Register trace provider with our context manager to prevent it from being overridden
+    this.traceProvider.register({
+      contextManager: contextManager,
+    });
+
     if (this.metricsProvider) metrics.setGlobalMeterProvider(this.metricsProvider);
     if (this.logProvider) logs.setGlobalLoggerProvider(this.logProvider);
   }
 
-  private registerContextManager(): void {
+  private setupContextManager(): LogzioContextManager {
     const contextManager = LogzioContextManager.getInstance();
     contextManager.setInitialCustomAttributes(this.config.customAttributes);
     contextManager.enable();
     context.setGlobalContextManager(contextManager);
+    return contextManager;
   }
 
   /**
@@ -124,6 +129,32 @@ export class OpenTelemetryProvider {
     if (this.logProvider) promises.push(this.logProvider.shutdown());
 
     return Promise.all(promises).then(() => {});
+  }
+
+  /**
+   * Wires the session manager to the processors after it's created.
+   * This allows processors to access live session/view data.
+   */
+  public setSessionManager(sessionManager: SessionManager): void {
+    try {
+      // Wire session manager to span processors
+      const spanProcessors = (this.traceProvider as any)._config?.spanProcessors || [];
+      spanProcessors.forEach((processor: any) => {
+        if (processor && typeof processor.setSessionManager === 'function') {
+          processor.setSessionManager(sessionManager);
+        }
+      });
+
+      // Wire session manager to log processors
+      const logProcessors = (this.logProvider as any)?._config?.processors || [];
+      logProcessors.forEach((processor: any) => {
+        if (processor && typeof processor.setSessionManager === 'function') {
+          processor.setSessionManager(sessionManager);
+        }
+      });
+    } catch (error) {
+      rumLogger.warn('Failed to wire session manager to processors:', error);
+    }
   }
 
   /**

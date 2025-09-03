@@ -21,12 +21,27 @@ const { rumContextManager: mockContextManager } = require('@src/context/LogzioCo
 describe('SessionContextSpanProcessor', () => {
   let processor: SessionContextSpanProcessor;
   let testSetup: ReturnType<typeof setupProcessorsTest>;
+  let mockSessionManager: any;
 
   beforeEach(() => {
     testSetup = setupProcessorsTest();
     processor = new SessionContextSpanProcessor();
 
-    // Default mock returns
+    // Create mock session manager
+    mockSessionManager = {
+      getSessionId: jest.fn().mockReturnValue('test-session-id'),
+      getActiveViewAt: jest
+        .fn()
+        .mockReturnValue({ id: 'test-view-id', url: 'http://test.com', startedAt: Date.now() }),
+      getActiveView: jest
+        .fn()
+        .mockReturnValue({ id: 'test-view-id', url: 'http://test.com', startedAt: Date.now() }),
+    };
+
+    // Set the session manager on the processor
+    processor.setSessionManager(mockSessionManager);
+
+    // Default mock returns for context manager
     mockContextManager.getSessionId.mockReturnValue('test-session-id');
     mockContextManager.getViewId.mockReturnValue('test-view-id');
     mockContextManager.getCustomAttributes.mockReturnValue({ 'user.id': 'user-123' });
@@ -82,29 +97,41 @@ describe('SessionContextSpanProcessor', () => {
       expect(span.setAttribute).toHaveBeenCalledWith('metadata', '[object Object]');
     });
 
-    describe.each(sessionContextScenarios)('context scenario: $name', ({ sessionId, viewId }) => {
-      it('should handle context values correctly', () => {
-        mockContextManager.getSessionId.mockReturnValue(sessionId);
-        mockContextManager.getViewId.mockReturnValue(viewId);
-        mockContextManager.getCustomAttributes.mockReturnValue({});
+    describe.each(sessionContextScenarios)(
+      'session manager scenario: $name',
+      ({ sessionId, viewId }) => {
+        it('should handle session manager values correctly', () => {
+          // Mock session manager instead of context manager
+          mockSessionManager.getSessionId.mockReturnValue(sessionId);
+          if (viewId) {
+            mockSessionManager.getActiveViewAt.mockReturnValue({
+              id: viewId,
+              url: 'http://test.com',
+              startedAt: Date.now(),
+            });
+          } else {
+            mockSessionManager.getActiveViewAt.mockReturnValue(null);
+          }
+          mockContextManager.getCustomAttributes.mockReturnValue({});
 
-        const span = createMockSpan({ attributes: {} });
+          const span = createMockSpan({ attributes: {} });
 
-        expect(() => processor.onStart(span, {} as any)).not.toThrow();
+          expect(() => processor.onStart(span, {} as any)).not.toThrow();
 
-        if (sessionId) {
-          expect(span.setAttribute).toHaveBeenCalledWith(ATTR_SESSION_ID, sessionId);
-        } else {
-          expect(span.setAttribute).not.toHaveBeenCalledWith(ATTR_SESSION_ID, expect.anything());
-        }
+          if (sessionId) {
+            expect(span.setAttribute).toHaveBeenCalledWith(ATTR_SESSION_ID, sessionId);
+          } else {
+            expect(span.setAttribute).not.toHaveBeenCalledWith(ATTR_SESSION_ID, expect.anything());
+          }
 
-        if (viewId) {
-          expect(span.setAttribute).toHaveBeenCalledWith(ATTR_VIEW_ID, viewId);
-        } else {
-          expect(span.setAttribute).not.toHaveBeenCalledWith(ATTR_VIEW_ID, expect.anything());
-        }
-      });
-    });
+          if (viewId) {
+            expect(span.setAttribute).toHaveBeenCalledWith(ATTR_VIEW_ID, viewId);
+          } else {
+            expect(span.setAttribute).not.toHaveBeenCalledWith(ATTR_VIEW_ID, expect.anything());
+          }
+        });
+      },
+    );
 
     it('should handle undefined custom attributes gracefully', () => {
       mockContextManager.getCustomAttributes.mockReturnValue(undefined);

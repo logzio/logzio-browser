@@ -155,13 +155,11 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
    * Starts a new span if the provided event should create one.
    * @param element the interacted element
    * @param eventName the name of the event that triggered the span
-   * @param parentSpan the parent span of the new span
    * @returns the generated span or undefined if no span started.
    */
   private createSpan(
     element: EventTarget | null | undefined,
     eventName: EventName,
-    parentSpan?: Span,
   ): Span | undefined {
     if (!(element instanceof HTMLElement)) {
       return undefined;
@@ -189,9 +187,7 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
           },
         },
         // prettier-ignore
-        parentSpan
-          ? trace.setSpan(context.active(), parentSpan)
-          : undefined,
+        context.active(),
       );
 
       // Ensure _shouldPreventSpanCreation is initialized (defensive programming for constructor timing)
@@ -221,9 +217,8 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
 
     const now = Date.now();
     const target = event?.target;
-    const parentSpan = trace.getSpan(context.active());
 
-    const span = this.createSpan(target, SpanName.CLICK, parentSpan);
+    const span = this.createSpan(target, SpanName.CLICK);
     if (!span) {
       return;
     }
