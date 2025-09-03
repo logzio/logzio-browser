@@ -47,7 +47,14 @@ function getMetricsViews(): MetricView[] {
         if (customAttributes && Object.keys(customAttributes).length > 0) {
           Object.entries(customAttributes).forEach(([key, value]) => {
             if (attributes[key] === undefined) {
-              attributes[key] = value;
+              const type = typeof value;
+              if (type === 'string') {
+                attributes[key] = value as string;
+              } else if (type === 'number' || type === 'boolean') {
+                attributes[key] = String(value);
+              } else {
+                // skip non-primitive values
+              }
             }
           });
         }

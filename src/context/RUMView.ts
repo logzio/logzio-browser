@@ -1,6 +1,7 @@
 import { Logger, logs } from '@opentelemetry/api-logs';
 import { AttributeNames as otelAttributeNames } from '@opentelemetry/instrumentation-user-interaction';
 import { ATTR_URL_PATH } from '@opentelemetry/semantic-conventions';
+import { ATTR_SESSION_ID, ATTR_VIEW_ID } from '../instrumentation';
 import { WebVitalsAggregator } from '../aggregations/WebVitalsAggregator';
 import type { RUMConfig } from '../config';
 import { generateId } from '../utils';
@@ -57,11 +58,8 @@ export class RUMView {
     if (this.config.enable?.viewEvents) {
       this.logsProvider.emit({
         severityText: 'INFO',
-        body: `view ${this.viewId} started in session ${this.sessionId}`,
         attributes: {
-          [ATTR_URL_PATH]: this.url,
-          startTime: this.startTime,
-          [otelAttributeNames.EVENT_TYPE]: RUMView.VIEW_START_EVENT_NAME,
+          ...this.getAttributes(RUMView.VIEW_START_EVENT_NAME),
         },
       });
     }
@@ -85,15 +83,27 @@ export class RUMView {
     if (this.config.enable?.viewEvents) {
       this.logsProvider.emit({
         severityText: 'INFO',
-        body: `view ${this.viewId} ended in session ${this.sessionId} after ${this.getDuration()}ms`,
         attributes: {
-          [ATTR_URL_PATH]: this.url,
+          ...this.getAttributes(RUMView.VIEW_END_EVENT_NAME),
           duration: this.getDuration(),
-          startTime: this.startTime,
-          [otelAttributeNames.EVENT_TYPE]: RUMView.VIEW_END_EVENT_NAME,
         },
       });
     }
+  }
+
+  /**
+   * Returns the attributes to add to the view event.
+   * @param eventType - The type of event.
+   * @returns The attributes to add to the view event.
+   */
+  private getAttributes(eventType: string): Record<string, any> {
+    return {
+      [ATTR_URL_PATH]: this.url,
+      startTime: this.startTime,
+      [ATTR_SESSION_ID]: this.sessionId,
+      [ATTR_VIEW_ID]: this.viewId,
+      [otelAttributeNames.EVENT_TYPE]: eventType,
+    };
   }
 
   /**

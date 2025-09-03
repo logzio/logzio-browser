@@ -99,17 +99,21 @@ describe('RUMView lifecycle and events', () => {
     // Check view_start event
     const startEvent = emitMock.mock.calls[0][0];
     expect(startEvent.severityText).toBe('INFO');
-    expect(typeof startEvent.body).toBe('string');
     expect(startEvent.attributes['url.path']).toBe(window.location.href);
     expect(startEvent.attributes['event.type']).toBe('view_start');
+    expect(startEvent.attributes['session.id']).toBe('sess-9');
+    expect(typeof startEvent.attributes['view.id']).toBe('string');
+    expect(typeof startEvent.attributes.startTime).toBe('number');
 
     // Check view_end event
     const endEvent = emitMock.mock.calls[1][0];
     expect(endEvent.severityText).toBe('INFO');
-    expect(typeof endEvent.body).toBe('string');
     expect(endEvent.attributes['url.path']).toBe(window.location.href);
     expect(typeof endEvent.attributes.duration).toBe('number');
     expect(endEvent.attributes['event.type']).toBe('view_end');
+    expect(endEvent.attributes['session.id']).toBe('sess-9');
+    expect(typeof endEvent.attributes['view.id']).toBe('string');
+    expect(typeof endEvent.attributes.startTime).toBe('number');
   });
 
   it('should not emit event when viewEvents disabled', () => {
