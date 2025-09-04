@@ -108,4 +108,62 @@ describe('EventMonitor', () => {
       expect.any(Error),
     );
   });
+
+  it('should unsubscribe from error tracking on stop', () => {
+    const { ErrorTracker } = require('@src/instrumentation/trackers');
+    const unsubscribeMock = jest.fn();
+
+    ErrorTracker.getInstance.mockReturnValue({
+      subscribe: jest.fn(() => unsubscribeMock),
+    });
+
+    const monitor = new EventMonitor();
+    monitor.stop();
+
+    expect(unsubscribeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('should remove activity event listeners on stop', () => {
+    const { EventListener } = require('@src/shared');
+    const removeMock = jest.fn();
+
+    EventListener.mockImplementation(() => ({
+      set: jest.fn(),
+      remove: removeMock,
+    }));
+
+    const monitor = new EventMonitor([DOM_EVENT.CLICK, DOM_EVENT.SCROLL]);
+    monitor.stop();
+
+    // Should call remove() for each activity listener (2 in this case)
+    expect(removeMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('should handle stop() being called multiple times safely', () => {
+    const { ErrorTracker } = require('@src/instrumentation/trackers');
+    const { EventListener } = require('@src/shared');
+    const unsubscribeMock = jest.fn();
+    const removeMock = jest.fn();
+
+    ErrorTracker.getInstance.mockReturnValue({
+      subscribe: jest.fn(() => unsubscribeMock),
+    });
+
+    EventListener.mockImplementation(() => ({
+      set: jest.fn(),
+      remove: removeMock,
+    }));
+
+    const monitor = new EventMonitor([DOM_EVENT.CLICK]);
+
+    // Call stop() multiple times
+    monitor.stop();
+    monitor.stop();
+    monitor.stop();
+
+    // Should only unsubscribe once (idempotent)
+    expect(unsubscribeMock).toHaveBeenCalledTimes(1);
+    // Activity listeners should be cleaned up on first call, subsequent calls should be safe
+    expect(removeMock).toHaveBeenCalledTimes(1);
+  });
 });

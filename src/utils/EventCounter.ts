@@ -15,7 +15,7 @@ export class EventMonitor {
     errors: 0,
   };
   private errorUnsubscribe: (() => void) | null = null;
-  private activityEventsListener: EventListener[] = [];
+  private activityEventsListeners: EventListener[] = [];
 
   constructor(private activityEvents?: DOM_EVENT[]) {
     if (activityEvents) {
@@ -47,6 +47,7 @@ export class EventMonitor {
    */
   public stop(): EventsCounter {
     this.unsubscribeFromErrorTracker();
+    this.unsubscribeFromActivityTracking();
 
     // Return a copy to prevent external mutation
     return { ...this.counters };
@@ -68,7 +69,7 @@ export class EventMonitor {
       try {
         const listener = new EventListener<Event>();
         listener.set(window, event, this.onActivity.bind(this));
-        this.activityEventsListener.push(listener);
+        this.activityEventsListeners.push(listener);
       } catch (error) {
         rumLogger.error('Event counter failed to setup activity tracking: ', error);
       }
@@ -94,5 +95,12 @@ export class EventMonitor {
       this.errorUnsubscribe();
       this.errorUnsubscribe = null;
     }
+  }
+
+  private unsubscribeFromActivityTracking(): void {
+    this.activityEventsListeners.forEach((listener) => {
+      listener.remove();
+    });
+    this.activityEventsListeners = [];
   }
 }
