@@ -11,7 +11,7 @@ import {
   onCLS,
   onINP,
 } from 'web-vitals/attribution';
-import { metrics } from '@opentelemetry/api';
+import { metrics, type Histogram } from '@opentelemetry/api';
 import { MeterProvider } from '@opentelemetry/sdk-metrics';
 import { ATTR_URL_PATH } from '@opentelemetry/semantic-conventions';
 import { LOGZIO_RUM_PROVIDER_NAME } from '../shared';
@@ -23,6 +23,7 @@ import { setIfDefined } from '../utils/helpers';
  */
 export class WebVitalsAggregator {
   private collectedMetrics: Record<string, MetricWithAttribution> = {};
+  private histograms: Record<string, Histogram> = {};
   private meter = metrics.getMeter(LOGZIO_RUM_PROVIDER_NAME);
 
   constructor(private readonly meterProvider: MeterProvider | null = null) {}
@@ -96,12 +97,28 @@ export class WebVitalsAggregator {
       ...this.getMetricAttributes(metric),
     };
 
-    const histogram = this.meter.createHistogram(`web.vitals.${metric.name.toLowerCase()}`, {
-      description: `${metric.name} web vital metric for a view.`,
-      unit: this.getMetricUnit(metric.name),
-    });
-
+    const unit = this.getMetricUnit(metric.name);
+    const histogram = this.getOrCreateHistogram(metric.name, unit);
     histogram.record(metric.value, attributes);
+  }
+
+  /**
+   * Gets or creates a cached histogram for the given metric name.
+   * @param metricName - The name of the metric.
+   * @param unit - The unit of the metric.
+   * @returns The cached or newly created histogram.
+   */
+  private getOrCreateHistogram(metricName: string, unit: string): Histogram {
+    const name = `web.vitals.${metricName.toLowerCase()}`;
+    let histogram = this.histograms[name];
+    if (!histogram) {
+      histogram = this.meter.createHistogram(name, {
+        description: `${metricName} web vital metric for a view.`,
+        unit,
+      });
+      this.histograms[name] = histogram;
+    }
+    return histogram;
   }
 
   /**
@@ -287,6 +304,7 @@ export class WebVitalsAggregator {
    */
   public stop(): void {
     this.cleanup();
+    this.histograms = {};
   }
 
   /**
