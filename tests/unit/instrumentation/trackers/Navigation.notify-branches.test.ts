@@ -22,20 +22,25 @@ import { rumLogger } from '@src/shared';
 describe('NavigationTracker notify error branch', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    NavigationTracker.shutdown(); // ensure clean singleton and unpatched history
+  });
+
+  afterEach(() => {
+    NavigationTracker.shutdown(); // restore history methods for other tests
   });
 
   it('should log when a subscriber throws', () => {
+    // Ensure a different starting URL so a navigation is detected
+    history.replaceState({}, '', '/a');
+
     const tracker = NavigationTracker.getInstance();
+    tracker.init();
 
     const unsubscribe = tracker.subscribe(NavigationEventType.STARTED, () => {
       throw new Error('handler failure');
     });
 
-    (tracker as any).notify(NavigationEventType.STARTED, {
-      oldUrl: 'https://a',
-      newUrl: 'https://b',
-      timestamp: Date.now(),
-    });
+    history.pushState({}, '', '/b'); // triggers STARTED/ENDED via patched history
 
     expect(rumLogger.error).toHaveBeenCalled();
     unsubscribe();

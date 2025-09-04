@@ -17,6 +17,7 @@ describe('NavigationTracker - Duplicate Events Prevention', () => {
 
   beforeEach(() => {
     setupTestEnvironment();
+    NavigationTracker.shutdown(); // ensure clean singleton
 
     // Setup navigation test environment
     const testSetup = setupNavigationTest();
@@ -26,10 +27,14 @@ describe('NavigationTracker - Duplicate Events Prevention', () => {
 
   afterEach(() => {
     cleanup();
+    NavigationTracker.shutdown(); // restore history methods
     cleanupTestEnvironment();
   });
 
   it('should handle init() idempotently (no double patch)', () => {
+    // Set initial URL
+    history.replaceState({}, '', '/');
+
     // Call init multiple times
     tracker.init();
     tracker.init();
@@ -38,12 +43,8 @@ describe('NavigationTracker - Duplicate Events Prevention', () => {
     const handler = jest.fn();
     const unsub = tracker.subscribe(NavigationEventType.STARTED, handler);
 
-    // Manually trigger a navigation event to verify it works
-    (tracker as any).notify(NavigationEventType.STARTED, {
-      oldUrl: 'http://localhost:3000/',
-      newUrl: 'http://localhost:3000/new-page',
-      timestamp: Date.now(),
-    });
+    // Trigger navigation event via history API
+    history.pushState({}, '', '/new-page');
 
     // Should only be called once despite multiple init calls
     expect(handler).toHaveBeenCalledTimes(1);
@@ -51,60 +52,63 @@ describe('NavigationTracker - Duplicate Events Prevention', () => {
     unsub();
   });
 
-  it('should not emit duplicate events for same URL', () => {
+  it('should not emit events when URL does not change', () => {
+    // Set initial URL
+    history.replaceState({}, '', '/same-page');
+
     tracker.init();
     const handler = jest.fn();
     const unsub = tracker.subscribe(NavigationEventType.STARTED, handler);
 
-    const url = 'http://localhost:3000/same-page';
+    // Navigation to same URL (no change, should not emit)
+    history.pushState({}, '', '/same-page');
 
-    // First navigation to URL
-    (tracker as any).notify(NavigationEventType.STARTED, {
-      oldUrl: 'http://localhost:3000/',
-      newUrl: url,
-      timestamp: Date.now(),
-    });
+    // Should not be called since URL didn't change
+    expect(handler).toHaveBeenCalledTimes(0);
 
-    // Second navigation to same URL (should still emit - different navigation events)
-    (tracker as any).notify(NavigationEventType.STARTED, {
-      oldUrl: url,
-      newUrl: url,
-      timestamp: Date.now() + 100,
-    });
+    // Now navigate to a different URL (should emit)
+    history.pushState({}, '', '/different-page');
 
-    // Both should be emitted (they're separate navigation events, even to same URL)
-    expect(handler).toHaveBeenCalledTimes(2);
+    // Should be called once for the actual navigation
+    expect(handler).toHaveBeenCalledTimes(1);
 
     unsub();
   });
 
   it('should emit separate events for different URLs', () => {
+    // Set initial URL
+    history.replaceState({}, '', '/');
+
     tracker.init();
     const handler = jest.fn();
     const unsub = tracker.subscribe(NavigationEventType.STARTED, handler);
 
-    const eventData1 = {
-      oldUrl: 'http://localhost:3000/',
-      newUrl: 'http://localhost:3000/page1',
-      timestamp: Date.now(),
-    };
-
-    const eventData2 = {
-      oldUrl: 'http://localhost:3000/page1',
-      newUrl: 'http://localhost:3000/page2',
-      timestamp: Date.now() + 100,
-    };
-
     // First navigation
-    (tracker as any).notify(NavigationEventType.STARTED, eventData1);
+    history.pushState({}, '', '/page1');
 
     // Second navigation to different URL
-    (tracker as any).notify(NavigationEventType.STARTED, eventData2);
+    history.pushState({}, '', '/page2');
 
     // Should be called twice for two different navigations
     expect(handler).toHaveBeenCalledTimes(2);
-    expect(handler).toHaveBeenNthCalledWith(1, eventData1);
-    expect(handler).toHaveBeenNthCalledWith(2, eventData2);
+
+    // Verify the event data structure (we can't predict exact timestamps)
+    expect(handler).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        oldUrl: expect.stringContaining('/'),
+        newUrl: expect.stringContaining('/page1'),
+        timestamp: expect.any(Number),
+      }),
+    );
+    expect(handler).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        oldUrl: expect.stringContaining('/page1'),
+        newUrl: expect.stringContaining('/page2'),
+        timestamp: expect.any(Number),
+      }),
+    );
 
     unsub();
   });
