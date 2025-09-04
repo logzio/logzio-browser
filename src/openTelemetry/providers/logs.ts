@@ -18,28 +18,28 @@ import {
 
 export function getLogProvider(
   resource: Resource,
-  endoint: string,
+  endpoint: string,
   config: RUMConfig,
 ): LoggerProvider {
   return new LoggerProvider({
     resource,
-    processors: getLogProcessors(endoint, config),
+    processors: getLogProcessors(endpoint, config),
   });
 }
 
-function getLogProcessors(endoint: string, config: RUMConfig): LogRecordProcessor[] {
+function getLogProcessors(endpoint: string, config: RUMConfig): LogRecordProcessor[] {
   return [
     new SessionContextLogProcessor(),
-    new BatchLogRecordProcessor(getLogExporter(endoint, config), {
+    new BatchLogRecordProcessor(getLogExporter(endpoint, config), {
       maxExportBatchSize: MAX_BULK_SIZE,
       scheduledDelayMillis: MAX_LOG_WAIT_MS,
     }),
   ];
 }
 
-function getLogExporter(endoint: string, config: RUMConfig): LogRecordExporter {
+function getLogExporter(endpoint: string, config: RUMConfig): LogRecordExporter {
   return new OTLPLogExporter({
-    url: endoint,
+    url: endpoint,
     headers: {
       [LOGZIO_REGION_HEADER]: config.region,
       [AUTHORIZATION_HEADER]: getAuthorizationHeader(config.tokens.logs),

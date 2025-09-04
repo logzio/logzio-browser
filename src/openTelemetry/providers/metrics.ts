@@ -16,13 +16,13 @@ import { AUTHORIZATION_HEADER, LOGZIO_REGION_HEADER, MAX_METRIC_WAIT_MS } from '
 
 export function getMetricsProvider(
   resource: Resource,
-  endoint: string,
+  endpoint: string,
   config: RUMConfig,
 ): MeterProvider {
   return new MeterProvider({
     resource: resource,
     views: getMetricsViews(),
-    readers: getMetricsReaders(endoint, config),
+    readers: getMetricsReaders(endpoint, config),
   });
 }
 
@@ -65,18 +65,18 @@ function getMetricsViews(): MetricView[] {
   ];
 }
 
-function getMetricsReaders(endoint: string, config: RUMConfig): MetricReader[] {
+function getMetricsReaders(endpoint: string, config: RUMConfig): MetricReader[] {
   return [
     new PeriodicExportingMetricReader({
-      exporter: getMetricsExporter(endoint, config),
+      exporter: getMetricsExporter(endpoint, config),
       exportIntervalMillis: MAX_METRIC_WAIT_MS,
     }),
   ];
 }
 
-function getMetricsExporter(endoint: string, config: RUMConfig): PushMetricExporter {
+function getMetricsExporter(endpoint: string, config: RUMConfig): PushMetricExporter {
   return new OTLPMetricExporter({
-    url: endoint,
+    url: endpoint,
     headers: {
       [LOGZIO_REGION_HEADER]: config.region,
       [AUTHORIZATION_HEADER]: getAuthorizationHeader(config.tokens.metrics),

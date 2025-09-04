@@ -25,13 +25,13 @@ import {
 
 export function getTraceProvider(
   resource: Resource,
-  endoint: string,
+  endpoint: string,
   config: RUMConfig,
 ): WebTracerProvider {
   return new WebTracerProvider({
     resource,
     sampler: getSampler(config),
-    spanProcessors: getSpanProcessors(endoint, config),
+    spanProcessors: getSpanProcessors(endpoint, config),
   });
 }
 
@@ -45,20 +45,20 @@ function getSampler(config: RUMConfig): Sampler {
   });
 }
 
-function getSpanProcessors(endoint: string, config: RUMConfig): SpanProcessor[] {
+function getSpanProcessors(endpoint: string, config: RUMConfig): SpanProcessor[] {
   return [
     new SessionContextSpanProcessor(),
     ...(config.enable?.frustrationDetection ? [new FrustrationDetectionProcessor(config)] : []),
-    new BatchSpanProcessor(getTraceExporter(endoint, config), {
+    new BatchSpanProcessor(getTraceExporter(endpoint, config), {
       maxExportBatchSize: MAX_BULK_SIZE,
       scheduledDelayMillis: MAX_SPAN_WAIT_MS,
     }),
   ];
 }
 
-function getTraceExporter(endoint: string, config: RUMConfig): SpanExporter {
+function getTraceExporter(endpoint: string, config: RUMConfig): SpanExporter {
   return new OTLPTraceExporter({
-    url: endoint,
+    url: endpoint,
     headers: {
       [LOGZIO_REGION_HEADER]: config.region,
       [AUTHORIZATION_HEADER]: getAuthorizationHeader(config.tokens.traces),
