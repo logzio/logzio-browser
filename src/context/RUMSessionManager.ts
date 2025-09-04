@@ -13,7 +13,7 @@ import type { ActiveViewInfo } from './types';
 export class RUMSessionManager {
   private static readonly LOGZIO_SESSION_ID: string = 'logzio-rum-session-id';
   private static readonly LOGZIO_LAST_ACTIVITY: string = 'logzio-rum-last-activity';
-  private static readonly LAST_ACTIVITY_CHECK_INTERVAL: number = 1000; // 1 second
+  private static readonly LAST_ACTIVITY_CHECK_INTERVAL: number = 10000; // 10 seconds
 
   private sessionId: string | null = null;
   private startTime: number | null = null;

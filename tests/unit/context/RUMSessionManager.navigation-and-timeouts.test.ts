@@ -143,7 +143,7 @@ describe('RUMSessionManager navigation and timeouts', () => {
     jest.clearAllMocks();
 
     // Advance time by inactivity check interval
-    jest.advanceTimersByTime(1000); // LAST_ACTIVITY_CHECK_INTERVAL
+    jest.advanceTimersByTime(10000); // LAST_ACTIVITY_CHECK_INTERVAL
 
     expect(viewInstance.end).toHaveBeenCalled();
     expect(LocalStorageStore.remove).toHaveBeenCalledWith('logzio-rum-session-id');
