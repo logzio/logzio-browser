@@ -107,8 +107,13 @@ describe('WebVitalsAggregator - processing and flush', () => {
         largestShiftTarget: 'div',
         largestShiftTime: 1,
         largestShiftValue: 0.1,
-        largestShiftEntry: {},
-        largestShiftSource: {},
+        largestShiftEntry: {
+          hadRecentInput: false,
+          sources: [{}],
+        },
+        largestShiftSource: {
+          node: { tagName: 'DIV' },
+        },
         loadState: 'loaded',
       },
     });
@@ -119,8 +124,13 @@ describe('WebVitalsAggregator - processing and flush', () => {
         timeToFirstByte: 1,
         firstByteToFCP: 1,
         loadState: 'loaded',
-        fcpEntry: {},
-        navigationEntry: {},
+        fcpEntry: {
+          entryType: 'paint',
+        },
+        navigationEntry: {
+          type: 'navigate',
+          redirectCount: 0,
+        },
       },
     });
     lcpCb?.({
@@ -133,8 +143,14 @@ describe('WebVitalsAggregator - processing and flush', () => {
         resourceLoadDelay: 2,
         resourceLoadDuration: 3,
         elementRenderDelay: 4,
-        navigationEntry: {},
-        lcpEntry: {},
+        navigationEntry: {
+          type: 'navigate',
+          redirectCount: 1,
+        },
+        lcpEntry: {
+          element: { tagName: 'IMG' },
+          size: 5000,
+        },
       },
     });
     ttfbCb?.({
@@ -146,7 +162,10 @@ describe('WebVitalsAggregator - processing and flush', () => {
         dnsDuration: 3,
         connectionDuration: 4,
         requestDuration: 5,
-        navigationEntry: {},
+        navigationEntry: {
+          type: 'navigate',
+          redirectCount: 2,
+        },
       },
     });
     inpCb?.({
@@ -157,13 +176,16 @@ describe('WebVitalsAggregator - processing and flush', () => {
         interactionTime: 10,
         interactionType: 'click',
         nextPaintTime: 12,
-        processedEventEntries: [],
+        processedEventEntries: [{ name: 'click', duration: 50 }],
         inputDelay: 1,
         processingDuration: 2,
         presentationDelay: 3,
         loadState: 'loaded',
-        longAnimationFrameEntries: [],
-        longestScript: 4,
+        longAnimationFrameEntries: [{ duration: 100, scripts: [{}, {}] }],
+        longestScript: {
+          entry: { invokerType: 'user-callback' },
+          subpart: 'script-execution',
+        },
         totalScriptDuration: 5,
         totalStyleAndLayoutDuration: 6,
         totalPaintDuration: 7,
@@ -174,20 +196,48 @@ describe('WebVitalsAggregator - processing and flush', () => {
     agg.flushMetrics();
 
     const calls = histogramRecordMock.mock.calls.map(([, attrs]) => attrs);
-    // Spot-check representative keys per metric
+    // Spot-check representative keys per metric (simplified structure)
     expect(calls).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ 'largest.shift.target': 'div', 'load.state': 'loaded' }),
         expect.objectContaining({
-          'time.to.first.byte': 1,
-          'first.contentful.paint.entry': expect.any(Object),
+          'largest.shift.target': 'div',
+          'load.state': 'loaded',
+          'largest.shift.entry.had.recent.input': 'false',
+          'largest.shift.entry.sources.bucket': '1',
+          'largest.shift.source.node.tag.name': 'DIV',
+        }),
+        expect.objectContaining({
+          'time.to.first.byte': '1',
+          'first.byte.to.first.contentful.paint': '1',
+          'first.contentful.load.state': 'loaded',
+          'first.contentful.paint.entry.entry.type': 'paint',
+          'navigation.entry.type': 'navigate',
+          'navigation.entry.redirect.bucket': '0',
         }),
         expect.objectContaining({
           'largest.contentful.paint.target': 'img',
           'largest.contentful.paint.url': 'https://asset',
+          'largest.contentful.paint.navigation.entry.type': 'navigate',
+          'largest.contentful.paint.navigation.entry.redirect.bucket': '1',
+          'largest.contentful.paint.entry.element.tag.name': 'IMG',
+          'largest.contentful.paint.entry.size.bucket': 'medium',
         }),
-        expect.objectContaining({ 'waiting.duration': 1, 'connection.duration': 4 }),
-        expect.objectContaining({ 'interaction.target': 'button', 'processing.duration': 2 }),
+        expect.objectContaining({
+          'waiting.duration': '1',
+          'connection.duration': '4',
+          'navigation.entry.type': 'navigate',
+          'navigation.entry.redirect.bucket': '2-3',
+        }),
+        expect.objectContaining({
+          'interaction.target': 'button',
+          'processing.duration': '2',
+          'processed.event.entries.count.bucket': '1',
+          'processed.event.entries.first.name': 'click',
+          'long.animation.frame.entries.count.bucket': '1',
+          'long.animation.frame.entries.first.scripts.bucket': '2-3',
+          'longest.script.invoker.type': 'user-callback',
+          'longest.script.subpart': 'script-execution',
+        }),
       ]),
     );
   });

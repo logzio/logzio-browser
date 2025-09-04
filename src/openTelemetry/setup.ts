@@ -18,8 +18,9 @@ import {
 } from '../instrumentation';
 import { NavigationTracker } from '../instrumentation/trackers';
 import { LogzioContextManager } from '../context/LogzioContextManager';
-import { EnvironmentCollector } from '../utils';
+import { EnvironmentCollector, EnvironmentAttributes } from '../utils';
 import { rumLogger, SessionManager } from '../shared';
+import { stringifyDefined } from '../utils/helpers';
 import { getMetricsProvider, getLogProvider, getTraceProvider } from './providers';
 
 const enum DataType {
@@ -40,8 +41,11 @@ export class OpenTelemetryProvider {
   private traceProvider: WebTracerProvider;
   private metricsProvider: MeterProvider | null = null;
   private logProvider: LoggerProvider | null = null;
+  private envData: EnvironmentAttributes = {};
 
   private constructor(private readonly config: RUMConfig) {
+    this.envData = this.collectEnvDataSafe();
+
     this.traceProvider = this.getTraceProvider();
     if (config.tokens.metrics) this.metricsProvider = this.getMetricsProvider();
     if (config.tokens.logs) this.logProvider = this.getLogProvider();
@@ -188,7 +192,7 @@ export class OpenTelemetryProvider {
    */
   private getMetricsProvider(): MeterProvider {
     return getMetricsProvider(
-      this.getResource(),
+      this.getResource(true),
       this.getEndpointUrl(DataType.METRICS),
       this.config,
     );
@@ -204,9 +208,10 @@ export class OpenTelemetryProvider {
 
   /**
    * Returns a resource.
+   * @param isMetrics - Whether this resource is for metrics (defaults to false).
    * @returns The resource.
    */
-  private getResource(): Resource {
+  private getResource(isMetrics = false): Resource {
     let resource: Resource = emptyResource();
 
     if (this.config.service?.name)
@@ -223,12 +228,7 @@ export class OpenTelemetryProvider {
         }),
       );
 
-    const environmentData = EnvironmentCollector.collect({
-      collectOS: this.config.environmentData!.collectOS,
-      collectBrowser: this.config.environmentData!.collectBrowser,
-      collectDevice: this.config.environmentData!.collectDevice,
-      collectLanguage: this.config.environmentData!.collectLanguage,
-    });
+    const environmentData = this.getEnvDataForResource(isMetrics);
 
     if (Object.keys(environmentData).length > 0) {
       resource = resource.merge(resourceFromAttributes(environmentData));
@@ -278,5 +278,35 @@ export class OpenTelemetryProvider {
     }
 
     return instrumentations;
+  }
+
+  /**
+   * Safely collects environment data with error handling.
+   */
+  private collectEnvDataSafe(): EnvironmentAttributes {
+    try {
+      return EnvironmentCollector.collect({
+        collectOS: this.config.environmentData!.collectOS,
+        collectBrowser: this.config.environmentData!.collectBrowser,
+        collectDevice: this.config.environmentData!.collectDevice,
+        collectLanguage: this.config.environmentData!.collectLanguage,
+      });
+    } catch (error) {
+      rumLogger.error('Failed to collect environment data during setup', error);
+      return {};
+    }
+  }
+
+  /**
+   * Returns environment data for resource creation.
+   * For metrics, stringifies all values. For traces/logs, returns original types.
+   */
+  private getEnvDataForResource(
+    isMetrics = false,
+  ): Record<string, string | number> | Record<string, string> {
+    if (!isMetrics) {
+      return this.envData;
+    }
+    return stringifyDefined(this.envData);
   }
 }
