@@ -92,7 +92,7 @@ describe('ConsoleLogsInstrumentation Emission', () => {
     expect(typeof logRecord.body).toBe('string');
   });
 
-  it('should attach filtered stack trace attribute', () => {
+  it('should attach filtered stack trace attribute for error logs only', () => {
     console.error('boom');
 
     expect(mockLogger.emit).toHaveBeenCalledTimes(1);
@@ -107,6 +107,20 @@ describe('ConsoleLogsInstrumentation Emission', () => {
     // Should have reasonable number of lines (≤10)
     const lines = stackTrace.split('\n').filter((line: string) => line.trim());
     expect(lines.length).toBeLessThanOrEqual(10);
+  });
+
+  it('should not attach stack trace for non-error logs', () => {
+    console.warn('warning message');
+    console.info('info message');
+    console.log('log message');
+    console.debug('debug message');
+
+    expect(mockLogger.emit).toHaveBeenCalledTimes(4);
+
+    // Check that none of the non-error logs have stack traces
+    mockLogger.emit.mock.calls.forEach(([logRecord]) => {
+      expect(logRecord.attributes['console.stack_trace']).toBeUndefined();
+    });
   });
 
   it('should catch emitLog errors and do not break original console behavior', () => {

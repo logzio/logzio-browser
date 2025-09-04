@@ -95,13 +95,17 @@ export class ConsoleLogsInstrumentation extends InstrumentationBase {
 
     const severityNumber = this.mapSeverity(method);
     const body = this.formatBody(args);
-    const stackTrace = this.getStackTrace();
+    let attributes = {};
+
+    if (method === 'error') {
+      attributes = {
+        [ATTR_CONSOLE_STACK_TRACE]: this.getStackTrace(),
+      };
+    }
 
     const newLog: LogRecord = {
       body,
-      attributes: {
-        [ATTR_CONSOLE_STACK_TRACE]: stackTrace,
-      },
+      attributes: attributes,
     };
 
     newLog.severityText = method;
