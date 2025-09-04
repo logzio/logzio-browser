@@ -36,7 +36,7 @@ const enum DataType {
 export class OpenTelemetryProvider {
   private static readonly ENDPOINT = 'https://whatever/third/party/logzio/endpoint';
 
-  private static instance: OpenTelemetryProvider;
+  private static instance: OpenTelemetryProvider | null = null;
 
   private traceProvider: WebTracerProvider;
   private metricsProvider: MeterProvider | null = null;
@@ -126,13 +126,26 @@ export class OpenTelemetryProvider {
   /**
    * Shuts down the providers gracefully.
    */
-  public shutdown(): Promise<void> {
-    const promises: Promise<unknown>[] = [];
-    if (this.traceProvider) promises.push(this.traceProvider.shutdown());
-    if (this.metricsProvider) promises.push(this.metricsProvider.shutdown());
-    if (this.logProvider) promises.push(this.logProvider.shutdown());
+  public static async shutdown(): Promise<void> {
+    const op = OpenTelemetryProvider.instance;
 
-    return Promise.all(promises).then(() => {});
+    if (op) {
+      try {
+        // Force flush before shutdown
+        op.forceFlush();
+
+        // Shutdown all providers
+        const promises: Promise<unknown>[] = [];
+        if (op.traceProvider) promises.push(op.traceProvider.shutdown());
+        if (op.metricsProvider) promises.push(op.metricsProvider.shutdown());
+        if (op.logProvider) promises.push(op.logProvider.shutdown());
+
+        await Promise.all(promises);
+      } finally {
+        // Always reset the singleton, even if shutdown fails
+        OpenTelemetryProvider.instance = null;
+      }
+    }
   }
 
   /**

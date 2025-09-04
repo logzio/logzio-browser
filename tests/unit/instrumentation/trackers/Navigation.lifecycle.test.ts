@@ -49,17 +49,17 @@ describe('NavigationTracker Lifecycle', () => {
     tracker.init();
     tracker.init();
 
-    expect(() => tracker.shutdown()).not.toThrow();
+    expect(() => testSetup.NavigationTracker.shutdown()).not.toThrow();
   });
 
   it('should handle shutdown gracefully', () => {
     const tracker = testSetup.NavigationTracker.getInstance();
     tracker.init();
 
-    expect(() => tracker.shutdown()).not.toThrow();
+    expect(() => testSetup.NavigationTracker.shutdown()).not.toThrow();
 
     // Multiple shutdowns should be safe
-    expect(() => tracker.shutdown()).not.toThrow();
+    expect(() => testSetup.NavigationTracker.shutdown()).not.toThrow();
   });
 
   it('should support re-initialization after shutdown', () => {
@@ -67,7 +67,7 @@ describe('NavigationTracker Lifecycle', () => {
 
     // First lifecycle
     tracker.init();
-    tracker.shutdown();
+    testSetup.NavigationTracker.shutdown();
 
     // Re-init should work
     expect(() => tracker.init()).not.toThrow();
@@ -85,7 +85,7 @@ describe('NavigationTracker Lifecycle', () => {
     expect(() => tracker.subscribe('STARTED', jest.fn())).not.toThrow();
 
     // Shutdown should work
-    expect(() => tracker.shutdown()).not.toThrow();
+    expect(() => testSetup.NavigationTracker.shutdown()).not.toThrow();
   });
 
   it('should provide consistent getCurrentUrl functionality', () => {

@@ -172,16 +172,20 @@ export class NavigationTracker {
   /**
    * Shuts down the navigation tracker and cleans up event listeners
    */
-  public shutdown(): void {
-    this.eventListeners.forEach((listener) => {
-      listener.remove();
-    });
-    this.eventListeners = [];
-    this.subscribers.clear();
-    this.isInitialized = false;
+  public static shutdown(): void {
+    const nt = NavigationTracker.getInstance();
 
-    this.unpatchHistoryMethods();
-    this.originalHistory = {};
+    if (nt) {
+      nt.eventListeners.forEach((listener) => {
+        listener.remove();
+      });
+      nt.eventListeners = [];
+      nt.subscribers.clear();
+      nt.isInitialized = false;
+      nt.unpatchHistoryMethods();
+      nt.originalHistory = {};
+    }
+    NavigationTracker.instance = null;
   }
 
   private unpatchHistoryMethods(): void {

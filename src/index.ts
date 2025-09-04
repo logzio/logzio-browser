@@ -21,6 +21,11 @@ export class LogzioRUM {
    * @param config - The configuration for the RUM SDK.
    */
   public static init(config: Partial<RUMConfigOptions>): void {
+    if (LogzioRUM.instance) {
+      rumLogger.warn('LogzioRUM is already initialized.');
+      return;
+    }
+
     try {
       const sdk = new LogzioRUM(new RUMConfig(config));
       LogzioRUM.instance = sdk;
@@ -106,11 +111,23 @@ export class LogzioRUM {
   /**
    * Shuts down the Logzio RUM SDK.
    */
-  public static shutdown(): void {
-    if (LogzioRUM.session) {
-      LogzioRUM.session.shutdown();
-      LogzioRUM.session = null;
+  public static async shutdown(): Promise<void> {
+    try {
+      if (LogzioRUM.session) {
+        LogzioRUM.session.shutdown();
+        LogzioRUM.session = null;
+      }
+
+      await OpenTelemetryProvider.shutdown();
+      NavigationTracker.shutdown();
+      LogzioContextManager.getInstance().disable();
+
+      rumLogger.debug('LogzioRUM shutdown completed');
+    } catch (error) {
+      rumLogger.error('Error during LogzioRUM shutdown:', error);
+    } finally {
+      // Always clear static state, even if shutdown fails
+      LogzioRUM.instance = null;
     }
-    LogzioRUM.instance = null;
   }
 }

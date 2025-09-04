@@ -8,6 +8,7 @@ import {
   mockGetMetricsProvider,
   mockGetLogProvider,
 } from '../../__utils__/otelMocks';
+import { OpenTelemetryProvider } from '@src/openTelemetry/setup';
 
 describe('OpenTelemetryProvider Lifecycle', () => {
   beforeEach(() => {
@@ -73,8 +74,8 @@ describe('OpenTelemetryProvider Lifecycle', () => {
       mockGetMetricsProvider.mockReturnValue(mockMetricsProvider);
       mockGetLogProvider.mockReturnValue(mockLogProvider);
 
-      const provider = createProviderInstance(config);
-      const result = await provider.shutdown();
+      createProviderInstance(config);
+      const result = await OpenTelemetryProvider.shutdown();
 
       expect(mockTraceProvider.shutdown).toHaveBeenCalledTimes(1);
       expect(mockMetricsProvider.shutdown).toHaveBeenCalledTimes(1);
@@ -93,8 +94,8 @@ describe('OpenTelemetryProvider Lifecycle', () => {
       };
       mockGetTraceProvider.mockReturnValue(mockTraceProvider);
 
-      const provider = createProviderInstance(config);
-      const result = await provider.shutdown();
+      createProviderInstance(config);
+      const result = await OpenTelemetryProvider.shutdown();
 
       expect(mockTraceProvider.shutdown).toHaveBeenCalledTimes(1);
       expect(result).toBeUndefined();

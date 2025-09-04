@@ -68,7 +68,7 @@ describe('NavigationTracker Singleton', () => {
     expect(instance1).toBe(instance2);
     expect(typeof instance1.init).toBe('function');
     expect(typeof instance1.subscribe).toBe('function');
-    expect(typeof instance1.shutdown).toBe('function');
+    expect(typeof NavigationTracker.shutdown).toBe('function');
     expect(typeof instance1.getCurrentUrl).toBe('function');
   });
 

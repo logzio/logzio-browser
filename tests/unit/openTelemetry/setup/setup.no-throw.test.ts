@@ -4,6 +4,7 @@
 import '../../__utils__/otelMocks';
 import { createConfig } from '../../__utils__/configFactory';
 import { createProviderInstance, resetProviderSingleton } from '../../__utils__/providerHelpers';
+import { OpenTelemetryProvider } from '@src/openTelemetry/setup';
 
 describe('OpenTelemetryProvider No-Throw Policy', () => {
   beforeEach(() => {
@@ -35,8 +36,8 @@ describe('OpenTelemetryProvider No-Throw Policy', () => {
 
   it('shutdown should not throw with minimal config', async () => {
     const config = createConfig();
-    const provider = createProviderInstance(config);
+    createProviderInstance(config);
 
-    await expect(provider.shutdown()).resolves.toBeUndefined();
+    await expect(OpenTelemetryProvider.shutdown()).resolves.toBeUndefined();
   });
 });
