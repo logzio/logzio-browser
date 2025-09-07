@@ -351,7 +351,7 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
     try {
       const url = new URL(fullUrl);
       return `${url.pathname}${url.hash}${url.search}`;
-    } catch (error) {
+    } catch (_error) {
       // Fallback to original URL if parsing fails
       return fullUrl;
     }

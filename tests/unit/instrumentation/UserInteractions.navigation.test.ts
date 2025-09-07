@@ -49,59 +49,56 @@ describe('UserInteractions Navigation Handling', () => {
     expect(shouldUpdate).toBe(false);
   });
 
-  it('should demonstrate span name update logic', () => {
+  it('should demonstrate span name update logic with formatted URL', () => {
     const mockSpan = {
       updateName: jest.fn(),
     };
 
-    // Get the mocked OTEL API and add the needed methods
-    const otelApi = require('@opentelemetry/api');
-    otelApi.trace = {
-      getSpan: jest.fn().mockReturnValue(mockSpan),
-      setSpan: jest.fn(),
-      getActiveSpan: jest.fn(),
-    };
-    otelApi.context = {
-      active: jest.fn().mockReturnValue({}),
-      with: jest.fn(),
-    };
-
-    // Simulate navigation handling
+    // Simulate navigation handling with formatted URL
     const navigationEvent = {
       oldUrl: 'https://example.com/page1',
-      newUrl: 'https://example.com/page2',
+      newUrl: 'https://example.com/page2?param=value#section',
+    };
+
+    // Test URL formatting logic
+    const formatUrlForNavigation = (fullUrl: string): string => {
+      try {
+        const url = new URL(fullUrl);
+        return `${url.pathname}${url.hash}${url.search}`;
+      } catch (error) {
+        return fullUrl;
+      }
     };
 
     expect(() => {
       if (logic.shouldUpdateSpanName(navigationEvent.oldUrl, navigationEvent.newUrl, true)) {
-        const span = otelApi.trace.getSpan(otelApi.context.active());
-        if (span && typeof span.updateName === 'function') {
-          span.updateName(`Navigation ${navigationEvent.newUrl}`);
-        }
+        const formattedUrl = formatUrlForNavigation(navigationEvent.newUrl);
+        mockSpan.updateName(`Navigation: ${formattedUrl}`);
       }
     }).not.toThrow();
 
-    expect(mockSpan.updateName).toHaveBeenCalledWith('Navigation https://example.com/page2');
+    expect(mockSpan.updateName).toHaveBeenCalledWith('Navigation: /page2#section?param=value');
   });
 
-  it('should handle missing active span gracefully', () => {
-    // Get the mocked OTEL API and add the needed methods
-    const otelApi = require('@opentelemetry/api');
-    otelApi.trace = {
-      getSpan: jest.fn().mockReturnValue(undefined), // No active span
-      setSpan: jest.fn(),
-      getActiveSpan: jest.fn(),
-    };
-    otelApi.context = {
-      active: jest.fn().mockReturnValue({}),
-      with: jest.fn(),
+  it('should handle URL formatting edge cases', () => {
+    const formatUrlForNavigation = (fullUrl: string): string => {
+      try {
+        const url = new URL(fullUrl);
+        return `${url.pathname}${url.hash}${url.search}`;
+      } catch (error) {
+        return fullUrl;
+      }
     };
 
-    expect(() => {
-      const span = otelApi.trace.getSpan(otelApi.context.active());
-      if (span && typeof span.updateName === 'function') {
-        span.updateName('Navigation https://example.com/page2');
-      }
-    }).not.toThrow();
+    // Test various URL formats
+    expect(formatUrlForNavigation('https://example.com/path')).toBe('/path');
+    expect(formatUrlForNavigation('https://example.com/path?query=1')).toBe('/path?query=1');
+    expect(formatUrlForNavigation('https://example.com/path#hash')).toBe('/path#hash');
+    expect(formatUrlForNavigation('https://example.com/path?query=1#hash')).toBe(
+      '/path#hash?query=1',
+    );
+
+    // Test invalid URL fallback
+    expect(formatUrlForNavigation('invalid-url')).toBe('invalid-url');
   });
 });

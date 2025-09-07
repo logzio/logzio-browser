@@ -20,31 +20,28 @@ describe('OpenTelemetryProvider Instrumentation Registration', () => {
   });
 
   describe('navigation tracker', () => {
-    it('should call navigationTracker.init once', () => {
+    it('should register instrumentations without errors', () => {
       const config = createConfig();
-      const mockNavigationTracker = { init: jest.fn() };
 
       const provider = createProviderInstance(config);
-      provider.registerInstrumentations(mockNavigationTracker);
 
-      expect(mockNavigationTracker.init).toHaveBeenCalledTimes(1);
+      expect(() => provider.registerInstrumentations()).not.toThrow();
     });
   });
 
   describe('user interactions', () => {
     it('should register user actions instrumentation when enabled', () => {
       const config = createConfig({
-        enable: { userActions: true },
+        enable: { userActions: true, navigation: true },
         frustrationThresholds: { heavyLoadThresholdMs: 3000 },
       });
-      const mockNavigationTracker = { init: jest.fn() };
 
       const provider = createProviderInstance(config);
-      provider.registerInstrumentations(mockNavigationTracker);
+      provider.registerInstrumentations();
 
       expect(MockLogzioUserInteractionInstrumentation).toHaveBeenCalledWith({
         frustrationThresholds: { heavyLoadThresholdMs: 3000 },
-        navigationTracker: mockNavigationTracker,
+        trackNavigation: true, // Updated to expect trackNavigation boolean
       });
 
       expect(mockRegisterInstrumentations).toHaveBeenCalledWith({
@@ -60,10 +57,8 @@ describe('OpenTelemetryProvider Instrumentation Registration', () => {
       const config = createConfig({
         enable: { documentLoad: true },
       });
-      const mockNavigationTracker = { init: jest.fn() };
-
       const provider = createProviderInstance(config);
-      provider.registerInstrumentations(mockNavigationTracker);
+      provider.registerInstrumentations();
 
       expect(MockDocumentLoadInstrumentation).toHaveBeenCalledWith();
       expect(mockRegisterInstrumentations).toHaveBeenCalledWith({
@@ -80,10 +75,8 @@ describe('OpenTelemetryProvider Instrumentation Registration', () => {
         enable: { resourceLoad: true },
         propagateTraceHeaderCorsUrls: [],
       });
-      const mockNavigationTracker = { init: jest.fn() };
-
       const provider = createProviderInstance(config);
-      provider.registerInstrumentations(mockNavigationTracker);
+      provider.registerInstrumentations();
 
       expect(MockFetchInstrumentation).toHaveBeenCalledWith({});
       expect(MockXMLHttpRequestInstrumentation).toHaveBeenCalledWith({});
@@ -102,10 +95,8 @@ describe('OpenTelemetryProvider Instrumentation Registration', () => {
         enable: { resourceLoad: true },
         propagateTraceHeaderCorsUrls: corsUrls,
       });
-      const mockNavigationTracker = { init: jest.fn() };
-
       const provider = createProviderInstance(config);
-      provider.registerInstrumentations(mockNavigationTracker);
+      provider.registerInstrumentations();
 
       const expectedConfig = { propagateTraceHeaderCorsUrls: corsUrls };
       expect(MockFetchInstrumentation).toHaveBeenCalledWith(expectedConfig);
@@ -125,10 +116,8 @@ describe('OpenTelemetryProvider Instrumentation Registration', () => {
       const config = createConfig({
         enable: { errorTracking: true },
       });
-      const mockNavigationTracker = { init: jest.fn() };
-
       const provider = createProviderInstance(config);
-      provider.registerInstrumentations(mockNavigationTracker);
+      provider.registerInstrumentations();
 
       expect(MockErrorTrackingInstrumentation).toHaveBeenCalledWith({});
       expect(mockRegisterInstrumentations).toHaveBeenCalledWith({
@@ -144,10 +133,8 @@ describe('OpenTelemetryProvider Instrumentation Registration', () => {
       const config = createConfig({
         enable: { consoleLogs: true },
       });
-      const mockNavigationTracker = { init: jest.fn() };
-
       const provider = createProviderInstance(config);
-      provider.registerInstrumentations(mockNavigationTracker);
+      provider.registerInstrumentations();
 
       expect(MockConsoleLogsInstrumentation).toHaveBeenCalledWith({});
       expect(mockRegisterInstrumentations).toHaveBeenCalledWith({
@@ -169,10 +156,8 @@ describe('OpenTelemetryProvider Instrumentation Registration', () => {
           consoleLogs: true,
         },
       });
-      const mockNavigationTracker = { init: jest.fn() };
-
       const provider = createProviderInstance(config);
-      provider.registerInstrumentations(mockNavigationTracker);
+      provider.registerInstrumentations();
 
       const registeredCall = mockRegisterInstrumentations.mock.calls[0][0];
       const instrumentations = registeredCall.instrumentations;

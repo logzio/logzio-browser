@@ -1,20 +1,6 @@
-jest.mock('@src/shared', () => ({
-  DOM_EVENT: {
-    POP_STATE: 'popstate',
-    PUSH_STATE: 'pushState',
-    REPLACE_STATE: 'replaceState',
-    GO: 'go',
-    BACK: 'back',
-    FORWARD: 'forward',
-  },
-  EventListener: class {
-    set() {}
-    remove() {}
-  },
-  rumLogger: {
-    error: jest.fn(),
-  },
-}));
+import { createNavigationSharedMock } from '../../__utils__/navigationTestHelpers';
+
+jest.mock('@src/shared', () => createNavigationSharedMock());
 
 import { NavigationTracker, NavigationEventType } from '@src/instrumentation/trackers/Navigation';
 import { rumLogger } from '@src/shared';

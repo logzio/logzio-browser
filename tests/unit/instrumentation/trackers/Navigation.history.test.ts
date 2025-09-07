@@ -10,24 +10,10 @@ import {
 } from '../../__utils__/navigationTestHelpers';
 
 // Mock shared dependencies
-jest.mock('@src/shared', () => ({
-  rumLogger: {
-    error: jest.fn(),
-    warn: jest.fn(),
-  },
-  DOM_EVENT: {
-    POP_STATE: 'popstate',
-    PUSH_STATE: 'pushState',
-    REPLACE_STATE: 'replaceState',
-    GO: 'go',
-    BACK: 'back',
-    FORWARD: 'forward',
-  },
-  EventListener: jest.fn().mockImplementation(() => ({
-    set: jest.fn(),
-    remove: jest.fn(),
-  })),
-}));
+jest.mock('@src/shared', () => {
+  const { createNavigationSharedMock } = require('../../__utils__/navigationTestHelpers');
+  return createNavigationSharedMock();
+});
 
 describe('NavigationTracker History API', () => {
   let testSetup: ReturnType<typeof setupNavigationTest>;

@@ -69,7 +69,7 @@ export const createUserInteractionsConfig = (overrides: any = {}) => ({
     rageClickCount: 3,
     rageClickIntervalMs: 1000,
   },
-  navigationTracker: mockNavigationTracker,
+  trackNavigation: true, // Updated to use trackNavigation instead of navigationTracker
   shouldPreventSpanCreation: jest.fn(() => false),
   ...overrides,
 });
@@ -143,6 +143,16 @@ export const testInstrumentationLogic = () => {
     // Test navigation update logic
     shouldUpdateSpanName: (oldUrl: string, newUrl: string, isEnabled: boolean) => {
       return oldUrl !== newUrl && isEnabled;
+    },
+
+    // Test URL formatting for navigation
+    formatUrlForNavigation: (fullUrl: string) => {
+      try {
+        const url = new URL(fullUrl);
+        return `${url.pathname}${url.hash}${url.search}`;
+      } catch (error) {
+        return fullUrl;
+      }
     },
   };
 };

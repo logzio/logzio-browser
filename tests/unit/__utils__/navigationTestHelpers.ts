@@ -17,8 +17,18 @@ export const createNavigationSharedMock = () => ({
   rumLogger: {
     error: mockRumLoggerError,
     warn: mockRumLoggerWarn,
+    debug: jest.fn(), // Add debug method
+    info: jest.fn(), // Add info method for completeness
   },
   EventListener: mockEventListenerConstructor,
+  DOM_EVENT: {
+    POP_STATE: 'popstate',
+    PUSH_STATE: 'pushState',
+    REPLACE_STATE: 'replaceState',
+    GO: 'go',
+    BACK: 'back',
+    FORWARD: 'forward',
+  },
 });
 
 // Mock references that should be created in the test files themselves

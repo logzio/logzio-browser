@@ -23,6 +23,19 @@ jest.mock('@src/openTelemetry/setup', () => ({
   },
 }));
 
+const mockNavigationTrackerInstance = {
+  subscribe: jest.fn(() => jest.fn()), // Returns unsubscribe function
+};
+
+jest.mock('@src/instrumentation/trackers', () => ({
+  NavigationEventType: {
+    STARTED: 'navigation:started',
+  },
+  NavigationTracker: {
+    getInstance: jest.fn(() => mockNavigationTrackerInstance),
+  },
+}));
+
 jest.mock('@src/context/RUMView', () => ({
   RUMView: jest.fn().mockImplementation(() => ({
     start: jest.fn(),
@@ -31,20 +44,12 @@ jest.mock('@src/context/RUMView', () => ({
   })),
 }));
 
-jest.mock('@src/instrumentation/trackers', () => ({
-  NavigationEventType: {
-    STARTED: 'navigation:started',
-  },
-  NavigationTracker: jest.fn(),
-}));
-
 import { RUMView } from '@src/context/RUMView';
 import { RUMSessionManager } from '@src/context/RUMSessionManager';
 import { LocalStorageStore, generateId } from '@src/utils';
 import { EventListener, ACTIVITY_EVENTS } from '@src/shared';
 
 describe('RUMSessionManager navigation and timeouts', () => {
-  let mockNavigationTracker: any;
   let eventListenerInstances: any[];
 
   beforeEach(() => {
@@ -60,7 +65,6 @@ describe('RUMSessionManager navigation and timeouts', () => {
       return instance;
     });
 
-    mockNavigationTracker = { subscribe: jest.fn() };
     (LocalStorageStore.get as jest.Mock).mockReturnValue('current-session');
   });
 
@@ -78,11 +82,16 @@ describe('RUMSessionManager navigation and timeouts', () => {
     const config = createConfig();
     const manager = new RUMSessionManager(config as any);
 
-    manager.start(mockNavigationTracker);
+    manager.start();
     const initialViewInstance = (RUMView as any).mock.results[0].value;
 
-    // Get the navigation handler
-    const navigationHandler = mockNavigationTracker.subscribe.mock.calls[0][1];
+    // Get the navigation handler from the mocked subscribe calls
+    expect(mockNavigationTrackerInstance.subscribe).toHaveBeenCalledWith(
+      'navigation:started',
+      expect.any(Function),
+    );
+    const subscribeMock = mockNavigationTrackerInstance.subscribe as jest.Mock;
+    const navigationHandler = subscribeMock.mock.calls[0][1] as Function;
 
     // Case A: Same URL - no change
     initialViewInstance.getUrl.mockReturnValue(window.location.href);
@@ -108,7 +117,7 @@ describe('RUMSessionManager navigation and timeouts', () => {
     const config = createConfig();
     const manager = new RUMSessionManager(config as any);
 
-    manager.start(mockNavigationTracker);
+    manager.start();
     const initialViewInstance = (RUMView as any).mock.results[0].value;
 
     jest.clearAllMocks();
@@ -137,7 +146,7 @@ describe('RUMSessionManager navigation and timeouts', () => {
       return null;
     });
 
-    manager.start(mockNavigationTracker);
+    manager.start();
     const viewInstance = (RUMView as any).mock.results[0].value;
 
     jest.clearAllMocks();
@@ -153,7 +162,7 @@ describe('RUMSessionManager navigation and timeouts', () => {
     const config = createConfig();
     const manager = new RUMSessionManager(config as any);
 
-    manager.start(mockNavigationTracker);
+    manager.start();
 
     // Test first two activity events
     const testEvents = ACTIVITY_EVENTS.slice(0, 2);
@@ -180,7 +189,7 @@ describe('RUMSessionManager navigation and timeouts', () => {
     const config = createConfig();
     const manager = new RUMSessionManager(config as any);
 
-    manager.start(mockNavigationTracker);
+    manager.start();
     const viewInstance = (RUMView as any).mock.results[0].value;
 
     manager.shutdown();
