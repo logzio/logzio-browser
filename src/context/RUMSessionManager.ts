@@ -27,10 +27,10 @@ export class RUMSessionManager {
   /**
    * Starts a session.
    */
-  public start(navigationTracker: NavigationTracker): void {
+  public start(): void {
     this.init();
     rumLogger.debug(`Starting session ${this.getSessionId()}.`);
-    this.setupEventsListeners(navigationTracker);
+    this.setupEventsListeners();
     this.startView();
     this.updateActivityTime();
     this.scheduleInactivityTimeoutCheck();
@@ -148,11 +148,11 @@ export class RUMSessionManager {
   /**
    * Sets up the event listeners.
    */
-  private setupEventsListeners(navigationTracker: NavigationTracker): void {
+  private setupEventsListeners(): void {
     this.setupVisibilityListener();
     this.setupUnloadListener();
     this.setupSessionIdChangeListener();
-    this.setupNavigationListener(navigationTracker);
+    this.setupNavigationListener();
     this.setupActivityListeners();
   }
 
@@ -205,7 +205,8 @@ export class RUMSessionManager {
    * Sets up the navigation listener.
    * To start a new view when a navigation event occurs.
    */
-  private setupNavigationListener(navigationTracker: NavigationTracker): void {
+  private setupNavigationListener(): void {
+    const navigationTracker = NavigationTracker.getInstance();
     if (this.config.enable!.navigation) {
       const boundNavigationListener = this.onNavigation.bind(this);
       navigationTracker.subscribe(NavigationEventType.STARTED, boundNavigationListener);

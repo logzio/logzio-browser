@@ -16,7 +16,6 @@ import {
   LogzioUserInteractionInstrumentation,
   ConsoleLogsInstrumentation,
 } from '../instrumentation';
-import { NavigationTracker } from '../instrumentation/trackers';
 import { LogzioContextManager } from '../context/LogzioContextManager';
 import { EnvironmentCollector, EnvironmentAttributes } from '../utils';
 import { rumLogger, SessionManager } from '../shared';
@@ -112,14 +111,11 @@ export class OpenTelemetryProvider {
 
   /**
    * Registers the instrumentations.
-   * @param navigationTracker - The navigation tracker.
    */
-  public registerInstrumentations(navigationTracker: NavigationTracker): void {
+  public registerInstrumentations(): void {
     rumLogger.debug('Registering OpenTelemetry instrumentations');
-    navigationTracker.init();
-
     registerInstrumentations({
-      instrumentations: this.getInstrumentations(navigationTracker),
+      instrumentations: this.getInstrumentations(),
     });
   }
 
@@ -254,7 +250,7 @@ export class OpenTelemetryProvider {
    * Returns the instrumentations.
    * @returns The instrumentations.
    */
-  private getInstrumentations(navigationTracker: NavigationTracker): Instrumentation[] {
+  private getInstrumentations(): Instrumentation[] {
     const instrumentations: Instrumentation[] = [];
 
     if (this.config.enable?.userActions) {
@@ -262,7 +258,7 @@ export class OpenTelemetryProvider {
       instrumentations.push(
         new LogzioUserInteractionInstrumentation({
           frustrationThresholds: this.config.frustrationThresholds,
-          navigationTracker: navigationTracker,
+          trackNavigation: this.config.enable.navigation,
         }),
       );
     }

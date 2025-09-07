@@ -45,7 +45,7 @@ export class LogzioRUM {
       const openTelemetryProvider = OpenTelemetryProvider.getInstance(this.config);
       openTelemetryProvider.registerProviders();
       this.startSession(openTelemetryProvider);
-      openTelemetryProvider.registerInstrumentations(NavigationTracker.getInstance());
+      openTelemetryProvider.registerInstrumentations();
       rumLogger.info('LogzioRUM initialized');
     } catch (error) {
       rumLogger.error('Failed to start LogzioRUM due to error: ', error);
@@ -62,7 +62,7 @@ export class LogzioRUM {
    */
   private startSession(openTelemetryProvider: OpenTelemetryProvider): void {
     LogzioRUM.session = new RUMSessionManager(this.config);
-    LogzioRUM.session.start(NavigationTracker.getInstance());
+    LogzioRUM.session.start();
     openTelemetryProvider.setSessionManager(LogzioRUM.session);
   }
 

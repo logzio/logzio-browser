@@ -82,6 +82,7 @@ export class NavigationTracker {
   private notify(eventType: NavigationEventType, eventData: NavigationEventData): void {
     const handlers = this.subscribers.get(eventType);
     if (handlers) {
+      rumLogger.debug(`Notifying ${eventType} navigation event to ${handlers.size} handlers`);
       handlers.forEach((handler) => {
         try {
           handler(eventData);

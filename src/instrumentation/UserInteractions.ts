@@ -55,7 +55,7 @@ function defaultShouldPreventSpanCreation() {
 
 interface LogzioUserInteractionInstrumentationConfig extends UserInteractionInstrumentationConfig {
   frustrationThresholds: RUMConfig['frustrationThresholds'];
-  navigationTracker?: NavigationTracker;
+  trackNavigation?: boolean;
 }
 
 export class LogzioUserInteractionInstrumentation extends InstrumentationBase<LogzioUserInteractionInstrumentationConfig> {
@@ -71,7 +71,8 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
   private eventListeners: EventListener[] = [];
   private clickHistory: TimeBoundQueue<HistoryClick> | null = null;
   private navigationUnsubscribe: (() => void) | null = null;
-  private navigationTracker?: NavigationTracker;
+  private trackNavigation?: boolean;
+  private navEvent: NavigationEventData | null = null;
 
   constructor(config: LogzioUserInteractionInstrumentationConfig) {
     super(
@@ -89,7 +90,7 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
     this.RAGE_CLICK_THRESHOLD_COUNT = config.frustrationThresholds!.rageClickCount;
     this.RAGE_CLICK_THRESHOLD_INTERVAL_MS = config.frustrationThresholds!.rageClickIntervalMs;
 
-    this.navigationTracker = config.navigationTracker;
+    this.trackNavigation = config.trackNavigation;
     this.clickHistory = new TimeBoundQueue<HistoryClick>(this.RAGE_CLICK_THRESHOLD_INTERVAL_MS);
   }
 
@@ -100,12 +101,12 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
 
   public enable(): void {
     this.setupEventListeners();
-    if (this.navigationTracker) {
-      this.navigationUnsubscribe = this.navigationTracker.subscribe(
-        NavigationEventType.STARTED,
-        this.onNavigation.bind(this),
-      );
-    }
+
+    const navigationTracker = NavigationTracker.getInstance();
+    this.navigationUnsubscribe = navigationTracker.subscribe(
+      NavigationEventType.STARTED,
+      this.onNavigation.bind(this),
+    );
   }
 
   public disable(): void {
@@ -160,6 +161,7 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
   private createSpan(
     element: EventTarget | null | undefined,
     eventName: EventName,
+    parentSpan?: Span,
   ): Span | undefined {
     if (!(element instanceof HTMLElement)) {
       return undefined;
@@ -174,20 +176,31 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
       return undefined;
     }
 
+    let spanName: string = SpanName.CLICK;
+    let url = window.location.href;
+    if (this.navEvent) {
+      const formattedUrl = this.formatUrlForNavigation(this.navEvent.newUrl);
+      spanName = `${SpanName.NAVIGATION}: ${formattedUrl}`;
+      url = this.navEvent.oldUrl;
+      this.navEvent = null;
+    }
+
     const xpath = getElementXPath(element, true);
     try {
       const span = this.tracer.startSpan(
-        eventName,
+        spanName,
         {
           attributes: {
             [otelAttributeNames.EVENT_TYPE]: eventName,
             [otelAttributeNames.TARGET_ELEMENT]: element.tagName,
             [otelAttributeNames.TARGET_XPATH]: xpath,
-            [otelAttributeNames.HTTP_URL]: window.location.href,
+            [otelAttributeNames.HTTP_URL]: url,
           },
         },
         // prettier-ignore
-        context.active(),
+        parentSpan
+          ? trace.setSpan(context.active(), parentSpan)
+          : undefined,
       );
 
       // Ensure _shouldPreventSpanCreation is initialized (defensive programming for constructor timing)
@@ -259,15 +272,12 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
   }
 
   /**
-   * Changes the current active span name upon a navigation to reflect that the user action caused a nvigation.
+   * Indicates to the active span that it caused a navigation.
    * @param event the navigation event details.
    */
   private onNavigation(event: NavigationEventData): void {
-    if (event.oldUrl !== event.newUrl) {
-      const span: Span | undefined = trace.getSpan(context.active());
-      if (span && typeof span.updateName === 'function') {
-        span.updateName(`${SpanName.NAVIGATION} ${event.newUrl}`);
-      }
+    if (this.trackNavigation) {
+      this.navEvent = event;
     }
   }
 
@@ -330,5 +340,20 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
     }
 
     click.span.end();
+  }
+
+  /**
+   * Formats a full URL to match OTEL's navigation URL format.
+   * @param fullUrl the full URL to format
+   * @returns formatted URL in OTEL format: pathname + hash + search
+   */
+  private formatUrlForNavigation(fullUrl: string): string {
+    try {
+      const url = new URL(fullUrl);
+      return `${url.pathname}${url.hash}${url.search}`;
+    } catch (error) {
+      // Fallback to original URL if parsing fails
+      return fullUrl;
+    }
   }
 }
