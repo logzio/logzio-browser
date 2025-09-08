@@ -58,6 +58,7 @@ interface ClickEvent {
   spanName: string;
   startTime: number;
   targetElement: string;
+  targetElementRef: HTMLElement; // Keep reference to actual element for passive control check
   frustrationTypes: FrustrationType[];
   counter: EventMonitor;
   finalizationTimeout?: NodeJS.Timeout;
@@ -290,6 +291,7 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
       spanName: spanName,
       startTime: startTime,
       targetElement: target.tagName,
+      targetElementRef: target, // Store reference to actual element
       frustrationTypes: [],
       counter: new EventMonitor(CLICK_ACTIVITY_EVENTS),
       lastActivityTime: startTime,
@@ -401,11 +403,18 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
    * @param counters the counters of the click event.
    */
   private isDeadClick(click: ClickEvent, counters: EventsCounter): void {
+    // Early guard: passive interactive controls should never be considered dead
+    // These elements provide immediate feedback (focus, selection) even without DOM mutations
+    if (this.isPassiveInteractiveControl(click.targetElementRef)) {
+      return;
+    }
+
     // A click is dead if it produces no activity:
     // - No DOM mutations (most important for React state changes)
     // - No network requests (fetch/xhr)
     // - No form submissions
     // - No input changes
+    // - No focus/blur events (for interactive elements)
     const hasActivity = (counters.activities || 0) > 0;
 
     if (!hasActivity) {
@@ -501,6 +510,50 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
 
     // Default: track other elements (conservative approach)
     return true;
+  }
+
+  /**
+   * Determines if an element is a passive interactive control that should never be considered dead.
+   * These are elements where clicking provides immediate feedback (focus, selection) even without DOM mutations.
+   * @param element the HTML element to check
+   * @returns true if the element is a passive interactive control
+   */
+  private isPassiveInteractiveControl(element: HTMLElement): boolean {
+    const tagName = element.tagName.toLowerCase();
+
+    // Form controls where focus/selection is the expected outcome
+    const formControls = ['input', 'textarea', 'select'];
+    if (formControls.includes(tagName)) {
+      return true;
+    }
+
+    // Elements with contenteditable
+    if (
+      element.hasAttribute('contenteditable') &&
+      element.getAttribute('contenteditable') !== 'false'
+    ) {
+      return true;
+    }
+
+    // Interactive roles where focus/state change is expected
+    const role = element.getAttribute('role');
+    const passiveInteractiveRoles = [
+      'textbox',
+      'combobox',
+      'listbox',
+      'slider',
+      'spinbutton',
+      'checkbox',
+      'radio',
+      'switch',
+      'tab',
+      'option',
+    ];
+    if (role && passiveInteractiveRoles.includes(role)) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
