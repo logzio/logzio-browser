@@ -33,7 +33,8 @@ export const enum DOM_EVENT {
 }
 
 /**
- * This array represents events that indicate user activity.
+ * This array represents events that indicate user activity for session management.
+ * These events will prevent session timeout when detected.
  */
 export const ACTIVITY_EVENTS: DOM_EVENT[] = [
   DOM_EVENT.CLICK,
@@ -41,20 +42,21 @@ export const ACTIVITY_EVENTS: DOM_EVENT[] = [
   DOM_EVENT.KEY_DOWN,
   DOM_EVENT.SCROLL,
   DOM_EVENT.TOUCH_START,
-  DOM_EVENT.FOCUS,
-  DOM_EVENT.BLUR,
   DOM_EVENT.INPUT,
-  DOM_EVENT.CHANGE,
 ];
 
 /**
  * This array represents the activities that indicate a click event caused action.
+ * These events are monitored within the click's idle window for dead click detection.
  */
 export const CLICK_ACTIVITY_EVENTS: DOM_EVENT[] = [
   DOM_EVENT.FETCH,
   DOM_EVENT.XHR,
   DOM_EVENT.SUBMIT,
   DOM_EVENT.INPUT,
+  DOM_EVENT.FOCUS,
+  DOM_EVENT.BLUR,
+  DOM_EVENT.CHANGE,
   DOM_EVENT.DOM_MUTATION,
 ];
 

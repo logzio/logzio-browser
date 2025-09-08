@@ -9,6 +9,7 @@ import {
 import { getElementXPath } from '@opentelemetry/sdk-trace-web';
 import { TimeBoundQueue } from '../utils';
 import { EventMonitor, EventsCounter } from '../utils/EventCounter';
+import { isClickableElement, isPassiveInteractiveControl } from '../utils/domInteractivity';
 import {
   DOM_EVENT,
   EventListener,
@@ -459,57 +460,7 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
    * @returns true if the element should be tracked for dead click detection
    */
   private isClickableElement(element: HTMLElement): boolean {
-    const tagName = element.tagName.toLowerCase();
-
-    // Always track these interactive elements
-    const interactiveElements = ['button', 'a', 'input', 'select', 'textarea'];
-    if (interactiveElements.includes(tagName)) {
-      return true;
-    }
-
-    // Track elements with click handlers or interactive attributes
-    if (
-      element.onclick ||
-      element.hasAttribute('onclick') ||
-      (element.hasAttribute('role') &&
-        ['button', 'link', 'menuitem'].includes(element.getAttribute('role')!)) ||
-      element.hasAttribute('tabindex') ||
-      element.style.cursor === 'pointer'
-    ) {
-      return true;
-    }
-
-    // Track elements that look clickable (common patterns)
-    const className = element.className.toLowerCase();
-    const clickableClassPatterns = ['btn', 'button', 'click', 'link', 'action', 'interactive'];
-    if (clickableClassPatterns.some((pattern) => className.includes(pattern))) {
-      return true;
-    }
-
-    // Don't track clicks on body, html, or other non-interactive containers
-    const nonInteractiveElements = [
-      'html',
-      'body',
-      'div',
-      'span',
-      'p',
-      'h1',
-      'h2',
-      'h3',
-      'h4',
-      'h5',
-      'h6',
-    ];
-    if (
-      nonInteractiveElements.includes(tagName) &&
-      !element.onclick &&
-      !element.hasAttribute('onclick')
-    ) {
-      return false;
-    }
-
-    // Default: track other elements (conservative approach)
-    return true;
+    return isClickableElement(element);
   }
 
   /**
@@ -519,41 +470,7 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
    * @returns true if the element is a passive interactive control
    */
   private isPassiveInteractiveControl(element: HTMLElement): boolean {
-    const tagName = element.tagName.toLowerCase();
-
-    // Form controls where focus/selection is the expected outcome
-    const formControls = ['input', 'textarea', 'select'];
-    if (formControls.includes(tagName)) {
-      return true;
-    }
-
-    // Elements with contenteditable
-    if (
-      element.hasAttribute('contenteditable') &&
-      element.getAttribute('contenteditable') !== 'false'
-    ) {
-      return true;
-    }
-
-    // Interactive roles where focus/state change is expected
-    const role = element.getAttribute('role');
-    const passiveInteractiveRoles = [
-      'textbox',
-      'combobox',
-      'listbox',
-      'slider',
-      'spinbutton',
-      'checkbox',
-      'radio',
-      'switch',
-      'tab',
-      'option',
-    ];
-    if (role && passiveInteractiveRoles.includes(role)) {
-      return true;
-    }
-
-    return false;
+    return isPassiveInteractiveControl(element);
   }
 
   /**
