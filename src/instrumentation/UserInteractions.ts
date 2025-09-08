@@ -43,6 +43,7 @@ interface HistoryClick {
 
 interface ClickEvent {
   span: Span;
+  spanName: string;
   startTime: number;
   targetElement: string;
   frustrationTypes: FrustrationType[];
@@ -160,6 +161,7 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
    */
   private createSpan(
     element: EventTarget | null | undefined,
+    spanName: string,
     eventName: EventName,
     parentSpan?: Span,
   ): Span | undefined {
@@ -176,11 +178,8 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
       return undefined;
     }
 
-    let spanName: string = SpanName.CLICK;
     let url = window.location.href;
     if (this.navEvent) {
-      const formattedUrl = this.formatUrlForNavigation(this.navEvent.newUrl);
-      spanName = `${SpanName.NAVIGATION}: ${formattedUrl}`;
       url = this.navEvent.oldUrl;
       this.navEvent = null;
     }
@@ -231,12 +230,18 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
     const now = Date.now();
     const target = event?.target;
 
-    const span = this.createSpan(target, SpanName.CLICK);
+    let spanName: string = SpanName.CLICK;
+    if (this.navEvent) {
+      const formattedUrl = this.formatUrlForNavigation(this.navEvent.newUrl);
+      spanName = `${SpanName.NAVIGATION}: ${formattedUrl}`;
+    }
+
+    const span = this.createSpan(target, spanName, SpanName.CLICK);
     if (!span) {
       return;
     }
 
-    const click = this.createNewClickEvent(span, target as HTMLElement, now);
+    const click = this.createNewClickEvent(span, spanName, target as HTMLElement, now);
     this.addClickToHistory(click);
     this.isRageClick(click);
     this.finalizeClick(click);
@@ -245,13 +250,20 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
   /**
    * Creates a new click event structure.
    * @param span the span representing the click event.
+   * @param spanName the name of the span.
    * @param target the target element of the click event.
    * @param startTime the start time of the click event.
    * @returns new click event.
    */
-  private createNewClickEvent(span: Span, target: HTMLElement, startTime: number): ClickEvent {
+  private createNewClickEvent(
+    span: Span,
+    spanName: string,
+    target: HTMLElement,
+    startTime: number,
+  ): ClickEvent {
     return {
       span,
+      spanName: spanName,
       startTime: startTime,
       targetElement: target.tagName,
       frustrationTypes: [],
@@ -331,7 +343,7 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
   private finalizeClick(click: ClickEvent): void {
     const counters = click.counter.stop();
     this.isErrorClick(click, counters);
-    if (click.span.spanContext.name === SpanName.CLICK) {
+    if (click.spanName === SpanName.CLICK) {
       this.isDeadClick(click, counters);
     }
 
