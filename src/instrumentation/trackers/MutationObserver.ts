@@ -77,16 +77,9 @@ export class MutationObserverTracker {
   private handleMutations(mutations: MutationRecord[]): void {
     const timestamp = Date.now();
 
-    rumLogger.debug(`MutationObserver: Received ${mutations.length} mutations`);
-
     for (const mutation of mutations) {
-      rumLogger.debug(
-        `MutationObserver: Processing ${mutation.type} mutation on ${(mutation.target as Element).tagName || 'unknown'}`,
-      );
-
       // Filter out irrelevant mutations for performance
       if (!this.isSignificantMutation(mutation)) {
-        rumLogger.debug(`MutationObserver: Mutation filtered out as not significant`);
         continue;
       }
 
@@ -97,9 +90,6 @@ export class MutationObserverTracker {
         significantChange: true,
       };
 
-      rumLogger.debug(
-        `MutationObserver: Notifying subscribers of significant ${mutation.type} mutation`,
-      );
       this.notify(eventData);
     }
   }

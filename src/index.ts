@@ -136,3 +136,8 @@ export class LogzioRUM {
     }
   }
 }
+
+// Make LogzioRUM available globally for browser usage
+if (typeof window !== 'undefined') {
+  (window as any).LogzioRUM = LogzioRUM;
+}

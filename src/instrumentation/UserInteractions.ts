@@ -195,6 +195,11 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
       return undefined;
     }
 
+    // Only track clicks on potentially interactive elements for dead click detection
+    if (!this.isClickableElement(element)) {
+      return undefined;
+    }
+
     let url = window.location.href;
     if (this.navEvent) {
       url = this.navEvent.oldUrl;
@@ -403,15 +408,9 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
     // - No input changes
     const hasActivity = (counters.activities || 0) > 0;
 
-    rumLogger.debug(
-      `Dead click check: activities=${counters.activities}, hasActivity=${hasActivity}, target=${click.targetElement}`,
-    );
-
     if (!hasActivity) {
       rumLogger.debug('Click recognized as dead - no activities detected');
       click.frustrationTypes.push(FrustrationType.DEAD_CLICK);
-    } else {
-      rumLogger.debug('Click has activity - NOT dead click');
     }
   }
 
@@ -443,6 +442,65 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
     }
 
     click.span.end();
+  }
+
+  /**
+   * Determines if an element is potentially clickable and should be tracked for dead clicks.
+   * @param element the HTML element to check
+   * @returns true if the element should be tracked for dead click detection
+   */
+  private isClickableElement(element: HTMLElement): boolean {
+    const tagName = element.tagName.toLowerCase();
+
+    // Always track these interactive elements
+    const interactiveElements = ['button', 'a', 'input', 'select', 'textarea'];
+    if (interactiveElements.includes(tagName)) {
+      return true;
+    }
+
+    // Track elements with click handlers or interactive attributes
+    if (
+      element.onclick ||
+      element.hasAttribute('onclick') ||
+      (element.hasAttribute('role') &&
+        ['button', 'link', 'menuitem'].includes(element.getAttribute('role')!)) ||
+      element.hasAttribute('tabindex') ||
+      element.style.cursor === 'pointer'
+    ) {
+      return true;
+    }
+
+    // Track elements that look clickable (common patterns)
+    const className = element.className.toLowerCase();
+    const clickableClassPatterns = ['btn', 'button', 'click', 'link', 'action', 'interactive'];
+    if (clickableClassPatterns.some((pattern) => className.includes(pattern))) {
+      return true;
+    }
+
+    // Don't track clicks on body, html, or other non-interactive containers
+    const nonInteractiveElements = [
+      'html',
+      'body',
+      'div',
+      'span',
+      'p',
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'h5',
+      'h6',
+    ];
+    if (
+      nonInteractiveElements.includes(tagName) &&
+      !element.onclick &&
+      !element.hasAttribute('onclick')
+    ) {
+      return false;
+    }
+
+    // Default: track other elements (conservative approach)
+    return true;
   }
 
   /**

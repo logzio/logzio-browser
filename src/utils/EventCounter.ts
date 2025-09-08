@@ -119,12 +119,9 @@ export class EventMonitor {
       try {
         const mutationTracker = MutationObserverTracker.getInstance();
         this.mutationUnsubscribe = mutationTracker.subscribe(this.onMutation.bind(this));
-        rumLogger.debug('EventCounter: Mutation tracking set up successfully');
       } catch (error) {
         rumLogger.error('Event counter failed to setup mutation tracking: ', error);
       }
-    } else {
-      rumLogger.debug('EventCounter: Skipping mutation tracking - activities not being tracked');
     }
   }
 
@@ -153,9 +150,6 @@ export class EventMonitor {
       // Only count mutations that happened after this monitor started
       if (event.timestamp >= this.startTime && this.counters.activities !== undefined) {
         this.counters.activities++;
-        rumLogger.debug(
-          `Mutation detected: ${event.mutationType} on ${event.target.tagName}, activities count: ${this.counters.activities}`,
-        );
         // Notify about activity for idle window logic
         if (this.activityCallback) {
           this.activityCallback();
