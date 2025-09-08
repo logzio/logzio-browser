@@ -1,4 +1,9 @@
-import { ErrorTracker, ErrorEventData } from '../instrumentation/trackers';
+import {
+  ErrorTracker,
+  ErrorEventData,
+  MutationObserverTracker,
+  MutationEventData,
+} from '../instrumentation/trackers';
 import { DOM_EVENT, EventListener, rumLogger } from '../shared';
 
 export interface EventsCounter {
@@ -15,13 +20,22 @@ export class EventMonitor {
     errors: 0,
   };
   private errorUnsubscribe: (() => void) | null = null;
+  private mutationUnsubscribe: (() => void) | null = null;
   private activityEventsListeners: EventListener[] = [];
+  private startTime: number;
+  private activityCallback?: () => void;
 
   constructor(private activityEvents?: DOM_EVENT[]) {
+    this.startTime = Date.now();
+
     if (activityEvents) {
       this.counters.activities = 0;
+
       this.activityEvents = activityEvents.filter(
-        (e) => e !== DOM_EVENT.ERROR && e !== DOM_EVENT.UNHANDLED_REJECTION,
+        (e) =>
+          e !== DOM_EVENT.ERROR &&
+          e !== DOM_EVENT.UNHANDLED_REJECTION &&
+          e !== DOM_EVENT.DOM_MUTATION,
       );
     }
     this.start();
@@ -31,14 +45,19 @@ export class EventMonitor {
    * Starts tracking events.
    */
   private start(): void {
-    try {
-      const errorTracker = ErrorTracker.getInstance();
-      this.errorUnsubscribe = errorTracker.subscribe(this.onError.bind(this));
-    } catch (error) {
-      rumLogger.error('Event counter failed to start error tracking: ', error);
-    }
-
+    // Set up mutation tracking FIRST to catch immediate DOM changes
+    this.setupMutationTracking();
+    this.setupErrorTracking();
     this.setupActivityTracking();
+  }
+
+  /**
+   * Sets a callback to be called whenever activity is detected.
+   * Used for idle window logic in dead click detection.
+   * @param callback Function to call when activity is detected
+   */
+  public setActivityCallback(callback: () => void): void {
+    this.activityCallback = callback;
   }
 
   /**
@@ -48,6 +67,8 @@ export class EventMonitor {
   public stop(): EventsCounter {
     this.unsubscribeFromErrorTracker();
     this.unsubscribeFromActivityTracking();
+    this.unsubscribeFromMutationTracking();
+    this.activityCallback = undefined;
 
     // Return a copy to prevent external mutation
     return { ...this.counters };
@@ -59,6 +80,18 @@ export class EventMonitor {
    */
   private onError(_event: ErrorEventData): void {
     this.counters.errors++;
+  }
+
+  /**
+   * Sets up error tracking.
+   */
+  private setupErrorTracking(): void {
+    try {
+      const errorTracker = ErrorTracker.getInstance();
+      this.errorUnsubscribe = errorTracker.subscribe(this.onError.bind(this));
+    } catch (error) {
+      rumLogger.error('Event counter failed to start error tracking: ', error);
+    }
   }
 
   /**
@@ -77,13 +110,59 @@ export class EventMonitor {
   }
 
   /**
+   * Sets up mutation tracking if activities should be tracked.
+   * DOM mutations are treated as activities for dead click detection.
+   */
+  private setupMutationTracking(): void {
+    // Only setup mutation tracking if we're tracking activities
+    if (this.counters.activities !== undefined) {
+      try {
+        const mutationTracker = MutationObserverTracker.getInstance();
+        this.mutationUnsubscribe = mutationTracker.subscribe(this.onMutation.bind(this));
+        rumLogger.debug('EventCounter: Mutation tracking set up successfully');
+      } catch (error) {
+        rumLogger.error('Event counter failed to setup mutation tracking: ', error);
+      }
+    } else {
+      rumLogger.debug('EventCounter: Skipping mutation tracking - activities not being tracked');
+    }
+  }
+
+  /**
    * Increments the activity counter.
    */
   private onActivity(): void {
     try {
       this.counters.activities!++;
+      // Notify about activity for idle window logic
+      if (this.activityCallback) {
+        this.activityCallback();
+      }
     } catch (error) {
       rumLogger.error('Event counter failed to increment activity counter: ', error);
+    }
+  }
+
+  /**
+   * Increments the activity counter for mutations that occurred after start time.
+   * DOM mutations are considered activities for dead click detection.
+   * @param event the mutation event data.
+   */
+  private onMutation(event: MutationEventData): void {
+    try {
+      // Only count mutations that happened after this monitor started
+      if (event.timestamp >= this.startTime && this.counters.activities !== undefined) {
+        this.counters.activities++;
+        rumLogger.debug(
+          `Mutation detected: ${event.mutationType} on ${event.target.tagName}, activities count: ${this.counters.activities}`,
+        );
+        // Notify about activity for idle window logic
+        if (this.activityCallback) {
+          this.activityCallback();
+        }
+      }
+    } catch (error) {
+      rumLogger.error('Event counter failed to increment activity counter for mutation: ', error);
     }
   }
 
@@ -102,5 +181,15 @@ export class EventMonitor {
       listener.remove();
     });
     this.activityEventsListeners = [];
+  }
+
+  /**
+   * Unsubscribes from the mutation tracker.
+   */
+  private unsubscribeFromMutationTracking(): void {
+    if (this.mutationUnsubscribe) {
+      this.mutationUnsubscribe();
+      this.mutationUnsubscribe = null;
+    }
   }
 }

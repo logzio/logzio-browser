@@ -9,7 +9,14 @@ import {
 import { getElementXPath } from '@opentelemetry/sdk-trace-web';
 import { TimeBoundQueue } from '../utils';
 import { EventMonitor, EventsCounter } from '../utils/EventCounter';
-import { DOM_EVENT, EventListener, rumLogger, CLICK_ACTIVITY_EVENTS } from '../shared';
+import {
+  DOM_EVENT,
+  EventListener,
+  rumLogger,
+  CLICK_ACTIVITY_EVENTS,
+  DEAD_CLICK_FINALIZATION_DELAY_MS,
+  DEAD_CLICK_IDLE_WINDOW_MS,
+} from '../shared';
 import { RUMConfig } from '../config';
 import {
   ATTR_FRUSTRATION_RAGE_CLICKS_COUNT,
@@ -17,7 +24,12 @@ import {
   FrustrationType,
   SpanName,
 } from './semconv';
-import { NavigationTracker, NavigationEventType, NavigationEventData } from './trackers';
+import {
+  NavigationTracker,
+  NavigationEventType,
+  NavigationEventData,
+  MutationObserverTracker,
+} from './trackers';
 
 /* If we want to support monitoring other events in the future. */
 const DEFAULT_INSTRUMENTED_EVENTS: EventName[] = [DOM_EVENT.CLICK];
@@ -48,6 +60,9 @@ interface ClickEvent {
   targetElement: string;
   frustrationTypes: FrustrationType[];
   counter: EventMonitor;
+  finalizationTimeout?: NodeJS.Timeout;
+  idleTimeout?: NodeJS.Timeout;
+  lastActivityTime: number;
 }
 
 function defaultShouldPreventSpanCreation() {
@@ -113,6 +128,7 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
   public disable(): void {
     this.removeEventsListeners();
     this.unsubscribeFromNavigation();
+    MutationObserverTracker.shutdown();
   }
 
   /**
@@ -128,7 +144,8 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
 
     ALL_TRACKABLE_USER_EVENTS.forEach((eventName) => {
       const eventListener = new EventListener<Event>();
-      eventListener.set(window, eventName as DOM_EVENT, this.onClick.bind(this));
+      // Use capture phase to catch clicks BEFORE React processes them
+      eventListener.set(window, eventName as DOM_EVENT, this.onClick.bind(this), { capture: true });
       this.eventListeners.push(eventListener);
     });
   }
@@ -244,7 +261,9 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
     const click = this.createNewClickEvent(span, spanName, target as HTMLElement, now);
     this.addClickToHistory(click);
     this.isRageClick(click);
-    this.finalizeClick(click);
+
+    // Start idle window logic for finalization
+    this.scheduleClickFinalization(click);
   }
 
   /**
@@ -261,14 +280,22 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
     target: HTMLElement,
     startTime: number,
   ): ClickEvent {
-    return {
+    const click: ClickEvent = {
       span,
       spanName: spanName,
       startTime: startTime,
       targetElement: target.tagName,
       frustrationTypes: [],
       counter: new EventMonitor(CLICK_ACTIVITY_EVENTS),
+      lastActivityTime: startTime,
     };
+
+    // Set up activity callback for idle window logic
+    click.counter.setActivityCallback(() => {
+      this.onClickActivity(click);
+    });
+
+    return click;
   }
 
   /**
@@ -324,13 +351,67 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
   }
 
   /**
+   * Schedules click finalization using idle window logic.
+   * @param click the click event to schedule finalization for.
+   */
+  private scheduleClickFinalization(click: ClickEvent): void {
+    // Set maximum finalization delay
+    click.finalizationTimeout = setTimeout(() => {
+      this.finalizeClick(click);
+    }, DEAD_CLICK_FINALIZATION_DELAY_MS);
+
+    // Start idle window - finalize if no activity for DEAD_CLICK_IDLE_WINDOW_MS
+    this.scheduleIdleFinalization(click);
+  }
+
+  /**
+   * Schedules idle finalization - finalizes click if no activity occurs within idle window.
+   * @param click the click event to schedule idle finalization for.
+   */
+  private scheduleIdleFinalization(click: ClickEvent): void {
+    // Clear existing idle timeout
+    if (click.idleTimeout) {
+      clearTimeout(click.idleTimeout);
+    }
+
+    // Schedule finalization after idle period
+    click.idleTimeout = setTimeout(() => {
+      this.finalizeClick(click);
+    }, DEAD_CLICK_IDLE_WINDOW_MS);
+  }
+
+  /**
+   * Called when activity is detected for a click - extends the idle window.
+   * @param click the click event that had activity.
+   */
+  private onClickActivity(click: ClickEvent): void {
+    click.lastActivityTime = Date.now();
+    // Extend the idle window since we detected activity
+    this.scheduleIdleFinalization(click);
+  }
+
+  /**
    * Marks the given click as a dead click if the counters indicate a dead click.
    * @param click the click event to check.
    * @param counters the counters of the click event.
    */
   private isDeadClick(click: ClickEvent, counters: EventsCounter): void {
-    if (counters.activities === 0) {
+    // A click is dead if it produces no activity:
+    // - No DOM mutations (most important for React state changes)
+    // - No network requests (fetch/xhr)
+    // - No form submissions
+    // - No input changes
+    const hasActivity = (counters.activities || 0) > 0;
+
+    rumLogger.debug(
+      `Dead click check: activities=${counters.activities}, hasActivity=${hasActivity}, target=${click.targetElement}`,
+    );
+
+    if (!hasActivity) {
+      rumLogger.debug('Click recognized as dead - no activities detected');
       click.frustrationTypes.push(FrustrationType.DEAD_CLICK);
+    } else {
+      rumLogger.debug('Click has activity - NOT dead click');
     }
   }
 
@@ -341,6 +422,16 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
    * @param click the click event to finalize.
    */
   private finalizeClick(click: ClickEvent): void {
+    // Clear both timeouts if they exist
+    if (click.finalizationTimeout) {
+      clearTimeout(click.finalizationTimeout);
+      click.finalizationTimeout = undefined;
+    }
+    if (click.idleTimeout) {
+      clearTimeout(click.idleTimeout);
+      click.idleTimeout = undefined;
+    }
+
     const counters = click.counter.stop();
     this.isErrorClick(click, counters);
     if (click.spanName === SpanName.CLICK) {

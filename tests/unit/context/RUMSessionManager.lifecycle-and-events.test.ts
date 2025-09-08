@@ -88,7 +88,7 @@ describe('RUMSessionManager lifecycle and events', () => {
     // Navigation subscription setup is tested in other test files
 
     // Should setup event listeners (visibility, unload, storage, activity events)
-    expect(EventListener).toHaveBeenCalledTimes(8); // 1 visibility + 1 unload + 1 storage + 5 activity events
+    expect(EventListener).toHaveBeenCalledTimes(9); // 1 visibility + 1 unload + 1 storage + 6 activity events
     eventListenerInstances.forEach((listener) => {
       expect(listener.set).toHaveBeenCalled();
     });

@@ -4,7 +4,7 @@ import { RUMSessionManager } from './context/RUMSessionManager';
 import { LogzioContextManager } from './context/LogzioContextManager';
 import { rumLogger } from './shared';
 import { OpenTelemetryProvider } from './openTelemetry/setup';
-import { NavigationTracker } from './instrumentation/trackers';
+import { NavigationTracker, MutationObserverTracker } from './instrumentation/trackers';
 
 /**
  * This class represents the Logzio RUM SDK.
@@ -55,6 +55,11 @@ export class LogzioRUM {
   private initComponents(): void {
     rumLogger.setLevel(this.config.logLevel);
     NavigationTracker.getInstance().init();
+
+    // Initialize MutationObserver early for dead click detection
+    if (this.config.enable?.frustrationDetection) {
+      MutationObserverTracker.getInstance().init();
+    }
   }
 
   /**
