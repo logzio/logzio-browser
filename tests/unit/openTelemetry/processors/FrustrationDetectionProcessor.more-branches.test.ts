@@ -1,4 +1,6 @@
+import { createOtelApiMock } from '../../__utils__/otelApiMocks';
 jest.mock('@opentelemetry/api', () => ({
+  ...createOtelApiMock(),
   Context: {} as any,
   HrTime: [0, 0] as any,
   metrics: {

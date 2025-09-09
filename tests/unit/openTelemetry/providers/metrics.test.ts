@@ -38,6 +38,7 @@ jest.mock('@opentelemetry/sdk-metrics', () => ({
       mockConstructCalls.push(['MeterProvider', options]);
     }
   },
+  AggregationTemporality: { DELTA: 1 },
 }));
 
 // Mock OTLPMetricExporter

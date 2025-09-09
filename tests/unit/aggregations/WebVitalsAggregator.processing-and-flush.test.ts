@@ -56,7 +56,7 @@ describe('WebVitalsAggregator - processing and flush', () => {
   });
 
   it('should record FCP with correct histogram name and unit ms', () => {
-    const agg = new WebVitalsAggregator();
+    const agg = new WebVitalsAggregator(null, 'session-123', 'view-456');
     agg.start();
 
     fcpCb?.({ name: 'FCP', value: 123, attribution: {} });
@@ -75,7 +75,7 @@ describe('WebVitalsAggregator - processing and flush', () => {
   });
 
   it('should handle CLS unit as unitless', () => {
-    const agg = new WebVitalsAggregator();
+    const agg = new WebVitalsAggregator(null, 'session-123', 'view-456');
     agg.start();
     clsCb?.({ name: 'CLS', value: 0.02, attribution: {} });
     agg.flushMetrics();
@@ -86,7 +86,7 @@ describe('WebVitalsAggregator - processing and flush', () => {
   });
 
   it('should include URL and default navigation.type in attributes', () => {
-    const agg = new WebVitalsAggregator();
+    const agg = new WebVitalsAggregator(null, 'session-123', 'view-456');
     agg.start();
     lcpCb?.({ name: 'LCP', value: 2500, attribution: {} });
     agg.flushMetrics();
@@ -97,7 +97,7 @@ describe('WebVitalsAggregator - processing and flush', () => {
   });
 
   it('should include representative keys for each metric in attribution mapping', () => {
-    const agg = new WebVitalsAggregator();
+    const agg = new WebVitalsAggregator(null, 'session-123', 'view-456');
     agg.start();
 
     clsCb?.({
@@ -243,7 +243,7 @@ describe('WebVitalsAggregator - processing and flush', () => {
   });
 
   it('should handle no metrics -> flush as a no-op besides cleanup', () => {
-    const agg = new WebVitalsAggregator();
+    const agg = new WebVitalsAggregator(null, 'session-123', 'view-456');
     agg.start();
     agg.flushMetrics();
     expect(createHistogramMock).not.toHaveBeenCalled();
@@ -252,7 +252,7 @@ describe('WebVitalsAggregator - processing and flush', () => {
   });
 
   it('should handle multiple metrics recorded -> all flushed', () => {
-    const agg = new WebVitalsAggregator();
+    const agg = new WebVitalsAggregator(null, 'session-123', 'view-456');
     agg.start();
     fcpCb?.({ name: 'FCP', value: 11, attribution: {} });
     lcpCb?.({ name: 'LCP', value: 22, attribution: {} });
@@ -263,7 +263,7 @@ describe('WebVitalsAggregator - processing and flush', () => {
 
   it('should call meterProvider.forceFlush when provided', () => {
     const provider = new MockMeterProvider();
-    const agg = new WebVitalsAggregator(provider as any);
+    const agg = new WebVitalsAggregator(provider as any, 'session-123', 'view-456');
     agg.start();
     ttfbCb?.({ name: 'TTFB', value: 77, attribution: {} });
     agg.flushMetrics();

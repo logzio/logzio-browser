@@ -1,5 +1,7 @@
 // Mock all problematic imports before any imports
+import { createOtelApiMock } from '../../__utils__/otelApiMocks';
 jest.mock('@opentelemetry/api', () => ({
+  ...createOtelApiMock(),
   Context: {},
   HrTime: [0, 0],
   metrics: {
