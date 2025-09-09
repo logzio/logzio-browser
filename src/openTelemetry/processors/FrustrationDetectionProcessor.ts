@@ -127,23 +127,35 @@ export class FrustrationDetectionProcessor implements SpanProcessor {
    * @param frustrationTypes - The frustration types to normalize.
    */
   private normalizeFrustrationAttributes(span: ReadableSpan, frustrationTypes: any): void {
-    frustrationTypes.forEach((frustrationType: any) => {
-      switch (frustrationType) {
-        case FrustrationType.DEAD_CLICK:
-          span.attributes[ATTR_FRUSTRATION_DEAD_CLICK] = true;
-          break;
-        case FrustrationType.ERROR_CLICK:
-          span.attributes[ATTR_FRUSTRATION_ERROR_CLICK] = true;
-          break;
-        case FrustrationType.HEAVY_LOAD:
-          span.attributes[ATTR_FRUSTRATION_HEAVY_LOAD] = true;
-          break;
-        case FrustrationType.RAGE_CLICK:
-          span.attributes[ATTR_FRUSTRATION_RAGE_CLICK] = true;
-          break;
+    const types = Array.isArray(frustrationTypes) ? frustrationTypes : [frustrationTypes];
+
+    types.forEach((frustrationType: any) => {
+      const attributeName = this.mapFrustrationTypeToAttributeName(frustrationType);
+      if (attributeName) {
+        span.attributes[attributeName] = true;
       }
     });
     delete span.attributes[ATTR_FRUSTRATION_TYPE];
+  }
+
+  /**
+   * Maps a frustration type to an attribute name.
+   * @param type - The frustration type to map.
+   * @returns The attribute name.
+   */
+  private mapFrustrationTypeToAttributeName(type: FrustrationType): string {
+    switch (type) {
+      case FrustrationType.DEAD_CLICK:
+        return ATTR_FRUSTRATION_DEAD_CLICK;
+      case FrustrationType.ERROR_CLICK:
+        return ATTR_FRUSTRATION_ERROR_CLICK;
+      case FrustrationType.HEAVY_LOAD:
+        return ATTR_FRUSTRATION_HEAVY_LOAD;
+      case FrustrationType.RAGE_CLICK:
+        return ATTR_FRUSTRATION_RAGE_CLICK;
+      default:
+        return '';
+    }
   }
 
   /**
@@ -159,7 +171,7 @@ export class FrustrationDetectionProcessor implements SpanProcessor {
         const viewId = this.getViewIdFromSpan(span);
         const sessionId = this.getSessionIdFromSpan(span);
 
-        span.attributes[ATTR_FRUSTRATION_TYPE] = FrustrationType.HEAVY_LOAD;
+        this.normalizeFrustrationAttributes(span, FrustrationType.HEAVY_LOAD);
         span.attributes[this.FRUSTRATION_LOAD_DURATION_MS_ATTRIBUTE_NAME] = duration;
 
         this.incrementFrustrationCounter(FrustrationType.HEAVY_LOAD, viewId, sessionId);

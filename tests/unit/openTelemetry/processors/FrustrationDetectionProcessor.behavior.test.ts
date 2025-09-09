@@ -57,6 +57,11 @@ describe('FrustrationDetectionProcessor behavior', () => {
 
       // Both types should be counted
       expect(add).toHaveBeenCalledTimes(2);
+
+      // Attributes should be normalized
+      expect(span.attributes['frustration.rage_click']).toBe(true);
+      expect(span.attributes['frustration.dead_click']).toBe(true);
+      expect(span.attributes['frustration.type']).toBeUndefined();
     });
   });
 
@@ -84,7 +89,7 @@ describe('FrustrationDetectionProcessor behavior', () => {
       );
       p.onEnd(span);
 
-      expect(span.attributes['frustration.type']).toBe('heavy_load');
+      expect(span.attributes['frustration.heavy_load']).toBe(true);
       expect(add).toHaveBeenCalledTimes(1);
     });
   });

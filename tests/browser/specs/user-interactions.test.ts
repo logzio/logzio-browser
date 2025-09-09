@@ -107,13 +107,26 @@ test.describe('RUM User Interactions Integration (Browser)', () => {
 
     // Check for frustration spans if any
     const frustrationSpans = data.traces.filter(
-      (span) => span.attributes && span.attributes['frustration.type'],
+      (span) =>
+        span.attributes &&
+        (span.attributes['frustration.rage_click'] ||
+          span.attributes['frustration.dead_click'] ||
+          span.attributes['frustration.error_click'] ||
+          span.attributes['frustration.heavy_load']),
     );
 
     for (const span of frustrationSpans) {
-      expect(span.attributes['frustration.type']).toBeDefined();
+      // Check that at least one frustration attribute is set
+      const hasFrustration =
+        span.attributes['frustration.rage_click'] ||
+        span.attributes['frustration.dead_click'] ||
+        span.attributes['frustration.error_click'] ||
+        span.attributes['frustration.heavy_load'];
+      expect(hasFrustration).toBeTruthy();
       expect(span.attributes['session.id']).toBeDefined();
       expect(span.attributes['view.id']).toBeDefined();
+      // The old frustration.type should be removed
+      expect(span.attributes['frustration.type']).toBeUndefined();
     }
   });
 

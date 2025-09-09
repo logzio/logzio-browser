@@ -36,9 +36,9 @@ import {
 const DEFAULT_INSTRUMENTED_EVENTS: EventName[] = [DOM_EVENT.CLICK];
 
 // All events we can potentially track - setup listeners for all, filter at runtime
+// Currently the _eventNames is not configurable in the config so we can monitor only the filtered events
 const ALL_TRACKABLE_USER_EVENTS: EventName[] = [
   DOM_EVENT.CLICK,
-  // Currently the _eventNames is not configurable in the config so we can monitor only the filtered events
   // DOM_EVENT.MOUSE_DOWN,
   // DOM_EVENT.MOUSE_UP,
   // DOM_EVENT.KEY_DOWN,
@@ -146,7 +146,6 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
 
     ALL_TRACKABLE_USER_EVENTS.forEach((eventName) => {
       const eventListener = new EventListener<Event>();
-      // Use capture phase to catch clicks BEFORE React processes them
       eventListener.set(window, eventName as DOM_EVENT, this.onClick.bind(this), { capture: true });
       this.eventListeners.push(eventListener);
     });

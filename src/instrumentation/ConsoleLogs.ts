@@ -15,6 +15,8 @@ export class ConsoleLogsInstrumentation extends InstrumentationBase {
   private static readonly NAME = 'console-logs';
   private static readonly VERSION = '1.0.0';
   private readonly MAX_FRAMES = 10;
+  private static readonly MAX_LOG_SIZE_BYTES = 500_000; // 500KB
+  private static readonly MAX_STACK_BYTES = 50_000; // 50KB
 
   private originalConsoleMethods: Partial<Record<ConsoleMethod, (...args: any[]) => void>> = {};
 
@@ -128,7 +130,7 @@ export class ConsoleLogsInstrumentation extends InstrumentationBase {
   }
 
   /**
-   * Returns the stack trace.
+   * Returns the stack trace with size limits.
    */
   private getStackTrace(): string {
     try {
@@ -137,7 +139,7 @@ export class ConsoleLogsInstrumentation extends InstrumentationBase {
 
       if (!stack) return '';
 
-      // Remove the first line (Error constructor) and filter out our instrumentation frames or common console wrapper patterns
+      // Remove the first line (Error constructor) and filter out our instrumentation frames
       const stackLines = stack.split('\n').slice(1);
       const filteredStack = stackLines
         .filter((line) => {
@@ -148,9 +150,10 @@ export class ConsoleLogsInstrumentation extends InstrumentationBase {
             !trimmedLine.includes('emitLog')
           );
         })
-        .slice(0, this.MAX_FRAMES); // Limit to first 10 frames to avoid excessive data
+        .slice(0, this.MAX_FRAMES);
 
-      return filteredStack.join('\n');
+      const fullStack = filteredStack.join('\n');
+      return this.truncateUtf8(fullStack, ConsoleLogsInstrumentation.MAX_STACK_BYTES);
     } catch {
       return '';
     }
@@ -177,18 +180,108 @@ export class ConsoleLogsInstrumentation extends InstrumentationBase {
   }
 
   /**
-   * Formats the body.
+   * Formats the body with byte limit to prevent excessive log sizes.
    */
   private formatBody(args: unknown[]): string {
-    return args
-      .map((arg) => {
-        if (typeof arg === 'string') return arg;
-        try {
-          return JSON.stringify(arg);
-        } catch {
-          return String(arg);
+    return this.buildBodyWithLimit(args, ConsoleLogsInstrumentation.MAX_LOG_SIZE_BYTES);
+  }
+
+  /**
+   * Builds log body respecting byte limits to prevent memory issues.
+   */
+  private buildBodyWithLimit(args: unknown[], limitBytes: number): string {
+    const parts: string[] = [];
+    let used = 0;
+
+    for (let i = 0; i < args.length; i++) {
+      const s = this.safeStringify(args[i]);
+      const sep = i === 0 ? '' : ' ';
+      const sepLen = this.utf8Len(sep);
+      const sLen = this.utf8Len(s);
+
+      if (used + sepLen + sLen <= limitBytes) {
+        parts.push(sep + s);
+        used += sepLen + sLen;
+      } else {
+        const remaining = Math.max(0, limitBytes - used - sepLen);
+        if (remaining > 0) {
+          parts.push(sep + this.truncateUtf8(s, remaining));
         }
-      })
-      .join(' ');
+        break;
+      }
+    }
+
+    return parts.join('');
+  }
+
+  /**
+   * Safely stringifies values, handling circular references and errors.
+   */
+  private safeStringify(arg: unknown): string {
+    if (typeof arg === 'string') return arg;
+    if (arg === undefined) return 'undefined';
+    if (arg === null) return 'null';
+
+    try {
+      const seen = new WeakSet();
+      return JSON.stringify(arg, function (_key, value) {
+        if (typeof value === 'object' && value !== null) {
+          if (seen.has(value)) return '[Circular]';
+          seen.add(value);
+        }
+        return value;
+      });
+    } catch {
+      try {
+        return String(arg);
+      } catch {
+        return '[Unserializable]';
+      }
+    }
+  }
+
+  /**
+   * Gets UTF-8 byte length of a string.
+   */
+  private utf8Len(str: string): number {
+    try {
+      return new TextEncoder().encode(str).length;
+    } catch {
+      return str.length; // Fallback for older browsers
+    }
+  }
+
+  /**
+   * Truncates string to specified byte limit with clear indication.
+   */
+  private truncateUtf8(str: string, limitBytes: number): string {
+    try {
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
+      const bytes = encoder.encode(str);
+
+      if (bytes.length <= limitBytes) return str;
+
+      // For small limits, just truncate without suffix to avoid confusion
+      if (limitBytes < 20) {
+        const truncatedBytes = bytes.slice(0, limitBytes);
+        return decoder.decode(truncatedBytes);
+      }
+
+      const suffix = '... [truncated]';
+      const suffixBytes = encoder.encode(suffix).length;
+      const availableBytes = Math.max(0, limitBytes - suffixBytes);
+
+      const truncatedBytes = bytes.slice(0, availableBytes);
+      return decoder.decode(truncatedBytes) + suffix;
+    } catch {
+      // Fallback for older browsers
+      if (limitBytes < 20) {
+        return str.substring(0, limitBytes);
+      }
+      const suffix = '... [truncated]';
+      const availableChars = Math.max(0, limitBytes - suffix.length);
+      return str.slice(0, availableChars) + suffix;
+    }
   }
 }
