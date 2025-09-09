@@ -14,8 +14,9 @@ import {
 import { metrics, type Histogram } from '@opentelemetry/api';
 import { MeterProvider } from '@opentelemetry/sdk-metrics';
 import { ATTR_URL_PATH } from '@opentelemetry/semantic-conventions';
-import { LOGZIO_RUM_PROVIDER_NAME } from '../shared';
+import { LOGZIO_RUM_PROVIDER_NAME, rumLogger } from '../shared';
 import { setIfDefined } from '../utils/helpers';
+import { ATTR_SESSION_ID, ATTR_VIEW_ID } from '../instrumentation';
 
 /**
  * This class represents the web vitals aggregator.
@@ -26,7 +27,11 @@ export class WebVitalsAggregator {
   private histograms: Record<string, Histogram> = {};
   private meter = metrics.getMeter(LOGZIO_RUM_PROVIDER_NAME);
 
-  constructor(private readonly meterProvider: MeterProvider | null = null) {}
+  constructor(
+    private readonly meterProvider: MeterProvider | null = null,
+    private readonly sessionId: string,
+    private readonly viewId: string,
+  ) {}
 
   /**
    * Starts the web vitals aggregator.
@@ -78,7 +83,9 @@ export class WebVitalsAggregator {
       return;
     }
 
+    rumLogger.debug(`collected ${Object.keys(this.collectedMetrics).length} metrics`);
     Object.values(this.collectedMetrics).forEach((metric) => {
+      rumLogger.debug(`recording metric ${metric.name}`);
       this.recordMetric(metric);
     });
     this.flushProvider();
@@ -94,6 +101,8 @@ export class WebVitalsAggregator {
       'metric.rating': metric.rating,
       [ATTR_URL_PATH]: window.location.href,
       'navigation.type': metric.navigationType || 'unknown',
+      [ATTR_SESSION_ID]: this.sessionId,
+      [ATTR_VIEW_ID]: this.viewId,
       ...this.getMetricAttributes(metric),
     };
 
@@ -341,6 +350,9 @@ export class WebVitalsAggregator {
   /**
    * Extracts essential navigation attributes for Web Vitals dashboards.
    * Focuses on categorical data and avoids high-cardinality timing points.
+   * @param entry - The navigation entry to extract the attributes from.
+   * @param prefix - The prefix to use for the attributes.
+   * @returns The extracted attributes.
    */
   private extractNavigationEntryAttributes(
     entry: PerformanceNavigationTiming,
@@ -367,6 +379,9 @@ export class WebVitalsAggregator {
 
   /**
    * Extracts attributes from PerformanceEntry objects (paint timing, etc.)
+   * @param entry - The performance entry to extract the attributes from.
+   * @param prefix - The prefix to use for the attributes.
+   * @returns The extracted attributes.
    */
   private extractPerformanceEntryAttributes(
     entry: PerformanceEntry,
@@ -384,6 +399,9 @@ export class WebVitalsAggregator {
 
   /**
    * Extracts attributes from LargestContentfulPaint entry
+   * @param entry - The LargestContentfulPaint entry to extract the attributes from.
+   * @param prefix - The prefix to use for the attributes.
+   * @returns The extracted attributes.
    */
   private extractLCPEntryAttributes(
     entry: any, // LargestContentfulPaint
@@ -410,6 +428,9 @@ export class WebVitalsAggregator {
 
   /**
    * Extracts attributes from LayoutShift entry
+   * @param entry - The LayoutShift entry to extract the attributes from.
+   * @param prefix - The prefix to use for the attributes.
+   * @returns The extracted attributes.
    */
   private extractLayoutShiftEntryAttributes(
     entry: any, // LayoutShift
@@ -431,6 +452,9 @@ export class WebVitalsAggregator {
 
   /**
    * Extracts attributes from LayoutShiftAttribution
+   * @param attribution - The LayoutShiftAttribution to extract the attributes from.
+   * @param prefix - The prefix to use for the attributes.
+   * @returns The extracted attributes.
    */
   private extractLayoutShiftAttributionAttributes(
     attribution: any, // LayoutShiftAttribution
@@ -446,6 +470,9 @@ export class WebVitalsAggregator {
   /**
    * Extracts essential attributes from PerformanceEventTiming entries.
    * Focuses on event type and bucketed counts, avoiding timing measurements as labels.
+   * @param entries - The PerformanceEventTiming entries to extract the attributes from.
+   * @param prefix - The prefix to use for the attributes.
+   * @returns The extracted attributes.
    */
   private extractEventTimingAttributes(
     entries: any[], // PerformanceEventTiming[]
@@ -469,6 +496,9 @@ export class WebVitalsAggregator {
   /**
    * Extracts essential attributes from Long Animation Frame entries.
    * Focuses on bucketed counts, avoiding timing measurements as labels.
+   * @param entries - The PerformanceLongAnimationFrameTiming entries to extract the attributes from.
+   * @param prefix - The prefix to use for the attributes.
+   * @returns The extracted attributes.
    */
   private extractLongAnimationFrameAttributes(
     entries: any[], // PerformanceLongAnimationFrameTiming[]
@@ -495,6 +525,9 @@ export class WebVitalsAggregator {
   /**
    * Extracts essential attributes from INP longest script summary.
    * Focuses on categorical data, avoiding high-cardinality identifiers and URLs.
+   * @param longestScript - The INPLongestScriptSummary to extract the attributes from.
+   * @param prefix - The prefix to use for the attributes.
+   * @returns The extracted attributes.
    */
   private extractLongestScriptAttributes(
     longestScript: any, // INPLongestScriptSummary

@@ -71,7 +71,11 @@ export class RUMView {
   private startMetricAggregation(): void {
     if (this.config.enable?.webVitals) {
       const otelProvider = OpenTelemetryProvider.getInstance(this.config);
-      this.aggregator = new WebVitalsAggregator(otelProvider.getMeterProvider());
+      this.aggregator = new WebVitalsAggregator(
+        otelProvider.getMeterProvider(),
+        this.sessionId,
+        this.viewId,
+      );
       this.aggregator.start();
     }
   }
