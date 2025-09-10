@@ -22,6 +22,7 @@ export class RUMView {
   private startTime: number | null = null;
   private aggregator: WebVitalsAggregator | null = null;
   private logsProvider: Logger = logs.getLogger(LOGZIO_RUM_PROVIDER_NAME);
+  private isActive: boolean = false;
 
   constructor(
     private readonly sessionId: string,
@@ -35,6 +36,7 @@ export class RUMView {
    * Starts a view.
    */
   public start(): void {
+    this.isActive = true;
     rumLogger.debug(`Starting view ${this.viewId}.`);
     this.startTime = Date.now();
     rumContextManager.setViewContext(this.sessionId, this.viewId);
@@ -46,9 +48,12 @@ export class RUMView {
    * Ends a view.
    */
   public end(): void {
-    rumLogger.debug(`Ending view ${this.viewId}.`);
-    this.aggregator?.flushMetrics();
-    this.generateEndEvent();
+    if (this.isActive) {
+      rumLogger.debug(`Ending view ${this.viewId}.`);
+      this.aggregator?.flushMetrics();
+      this.generateEndEvent();
+      this.isActive = false;
+    }
   }
 
   /**

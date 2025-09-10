@@ -141,15 +141,33 @@ describe('RUMView lifecycle and events', () => {
     expect(emitMock).toHaveBeenCalledTimes(2); // view_start and view_end
   });
 
-  it('should emit with zero duration when viewEvents enabled in end() before start()', () => {
+  it('should not emit any events when end() is called before start()', () => {
     const config = createConfig({ enable: { webVitals: false, viewEvents: true } });
     const view = new RUMView('s', config as any);
 
     view.end();
 
     const emitMock = (logs.getLogger as jest.Mock).mock.results[0].value.emit as jest.Mock;
-    const event = emitMock.mock.calls[0][0];
-    expect(event.attributes.duration).toBe(0);
-    expect(event.attributes.startTime).toBeNull();
+    expect(emitMock).not.toHaveBeenCalled();
+  });
+
+  it('should be idempotent - multiple end() calls should only emit one view_end event', () => {
+    const config = createConfig({ enable: { webVitals: false, viewEvents: true } });
+    const view = new RUMView('s', config as any);
+
+    view.start();
+    view.end();
+    view.end(); // Second call should be ignored
+    view.end(); // Third call should be ignored
+
+    const emitMock = (logs.getLogger as jest.Mock).mock.results[0].value.emit as jest.Mock;
+    expect(emitMock).toHaveBeenCalledTimes(2); // Only view_start and one view_end
+
+    // Verify the events are correct
+    const startEvent = emitMock.mock.calls[0][0];
+    expect(startEvent.attributes['event.type']).toBe('view_start');
+
+    const endEvent = emitMock.mock.calls[1][0];
+    expect(endEvent.attributes['event.type']).toBe('view_end');
   });
 });
