@@ -419,7 +419,7 @@ export async function initializeRUM(page: Page, config: BrowserRUMConfig): Promi
               
               // Add aria-label if present - matching our real implementation
               if (ariaLabel) {
-                attributes['target.aria_label'] = ariaLabel;
+                attributes['target_aria_label'] = ariaLabel;
               }
               
               window.__rumData.traces.push({

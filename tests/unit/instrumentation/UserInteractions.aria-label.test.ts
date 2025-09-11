@@ -219,7 +219,7 @@ describe('UserInteractions Aria Label Support', () => {
 
   describe('semantic convention constant', () => {
     it('should use the correct attribute name constant', () => {
-      expect(ATTR_TARGET_ARIA_LABEL).toBe('target.aria_label');
+      expect(ATTR_TARGET_ARIA_LABEL).toBe('target_aria_label');
     });
 
     it('should follow project naming conventions', () => {
