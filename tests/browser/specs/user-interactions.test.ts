@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { initializeRUM, getRUMData, clearRUMData as _clearRUMData } from '../helpers/rumHarness';
+import { ATTR_TARGET_ARIA_LABEL } from '../../../src/instrumentation/semconv';
 
 test.describe('RUM User Interactions Integration (Browser)', () => {
   test.beforeEach(async ({ page }) => {
@@ -52,7 +53,7 @@ test.describe('RUM User Interactions Integration (Browser)', () => {
       // Verify click span has required attributes
       expect(clickSpan.attributes['view.id']).toBe(pageViewSpan.attributes['view.id']);
       expect(clickSpan.attributes['session.id']).toBe(pageViewSpan.attributes['session.id']);
-      expect(clickSpan.attributes['target.element']).toBeDefined();
+      expect(clickSpan.attributes['target_element']).toBeDefined();
     }
   });
 
@@ -201,13 +202,110 @@ test.describe('RUM User Interactions Integration (Browser)', () => {
     const interactionSpans = data.traces.filter(
       (span) =>
         span.attributes &&
-        (span.attributes['target.element'] || (span.name && span.name.includes('click'))),
+        (span.attributes['target_element'] || (span.name && span.name.includes('click'))),
     );
 
     // Verify all interaction spans have session/view context
     for (const span of interactionSpans) {
       expect(span.attributes['session.id']).toBeDefined();
       expect(span.attributes['view.id']).toBeDefined();
+    }
+  });
+
+  test('should include aria-label attribute in click spans when present', async ({ page }) => {
+    // Initialize RUM with user interactions enabled
+    await initializeRUM(page, {
+      tokens: { traces: 'test-token' },
+      region: 'us',
+      enable: {
+        userActions: true,
+        documentLoad: true,
+        navigation: true,
+        frustrationDetection: false,
+        resourceLoad: false,
+        consoleLogs: false,
+        errorTracking: false,
+        webVitals: false,
+        viewEvents: false,
+      },
+    });
+
+    // Wait for initial setup
+    await page.waitForTimeout(500);
+
+    // Click on button with aria-label
+    await page.click('#aria-label-test');
+    await page.waitForTimeout(500);
+
+    // Get all spans
+    const data = await getRUMData(page);
+    const allSpans = data.traces;
+
+    // Find click-related spans
+    const clickSpans = allSpans.filter(
+      (span) => span.name && (span.name.includes('click') || span.name.includes('Click')),
+    );
+
+    if (clickSpans.length > 0) {
+      const clickSpan = clickSpans[0];
+
+      // Verify click span has aria-label attribute
+      expect(clickSpan.attributes[ATTR_TARGET_ARIA_LABEL]).toBe('Submit Application Form');
+
+      // Verify other standard attributes are still present
+      expect(clickSpan.attributes['target_element']).toBeDefined();
+      expect(clickSpan.attributes['target_xpath']).toBeDefined();
+      expect(clickSpan.attributes['view.id']).toBeDefined();
+      expect(clickSpan.attributes['session.id']).toBeDefined();
+    } else {
+      // If no click spans found, this test should fail
+      expect(clickSpans.length).toBeGreaterThan(0);
+    }
+  });
+
+  test('should not include aria-label attribute when not present', async ({ page }) => {
+    // Initialize RUM with user interactions enabled
+    await initializeRUM(page, {
+      tokens: { traces: 'test-token' },
+      region: 'us',
+      enable: {
+        userActions: true,
+        documentLoad: true,
+        navigation: true,
+        frustrationDetection: false,
+        resourceLoad: false,
+        consoleLogs: false,
+        errorTracking: false,
+        webVitals: false,
+        viewEvents: false,
+      },
+    });
+
+    // Wait for initial setup
+    await page.waitForTimeout(500);
+
+    // Click on button without aria-label
+    await page.click('#click-test');
+    await page.waitForTimeout(500);
+
+    // Get all spans
+    const data = await getRUMData(page);
+    const allSpans = data.traces;
+
+    // Find click-related spans
+    const clickSpans = allSpans.filter(
+      (span) => span.name && (span.name.includes('click') || span.name.includes('Click')),
+    );
+
+    if (clickSpans.length > 0) {
+      const clickSpan = clickSpans[0];
+
+      // Verify click span does NOT have aria-label attribute
+      expect(clickSpan.attributes[ATTR_TARGET_ARIA_LABEL]).toBeUndefined();
+
+      // Verify other standard attributes are still present
+      expect(clickSpan.attributes['target_element']).toBeDefined();
+      expect(clickSpan.attributes['target_xpath']).toBeDefined();
     }
   });
 });

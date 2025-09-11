@@ -253,7 +253,7 @@ test.describe('RUM Navigation Integration (Browser)', () => {
     if (clickSpans.length > 0) {
       const clickSpan = clickSpans[0];
       expect(clickSpan.name).toBe('click');
-      expect(clickSpan.attributes['target.element']).toBeDefined();
+      expect(clickSpan.attributes['target_element']).toBeDefined();
     }
   });
 });

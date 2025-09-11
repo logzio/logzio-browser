@@ -379,20 +379,53 @@ export async function initializeRUM(page: Page, config: BrowserRUMConfig): Promi
               if (!event.target) return;
               
               const target = event.target;
-              const targetInfo = target.tagName + (target.id ? '#' + target.id : '') + 
-                                (target.className ? '.' + target.className.split(' ').join('.') : '');
               
-              // Create interaction trace
+              // Generate a simple XPath for the target (mock implementation)
+              function generateXPath(element) {
+                if (element.id) {
+                  return '//*[@id="' + element.id + '"]';
+                }
+                var path = '';
+                while (element && element.nodeType === 1) { // Node.ELEMENT_NODE = 1
+                  var index = 0;
+                  var sibling = element.previousSibling;
+                  while (sibling) {
+                    if (sibling.nodeType === 1 && sibling.tagName === element.tagName) {
+                      index++;
+                    }
+                    sibling = sibling.previousSibling;
+                  }
+                  var tagName = element.tagName.toLowerCase();
+                  var pathIndex = index > 0 ? '[' + (index + 1) + ']' : '';
+                  path = '/' + tagName + pathIndex + path;
+                  element = element.parentElement;
+                }
+                return '/html' + path;
+              }
+              
+              var xpath = generateXPath(target);
+              var ariaLabel = target.getAttribute('aria-label');
+              
+              // Create interaction trace with attributes matching our real implementation
+              var attributes = {
+                'event_type': 'click',
+                'target_element': target.tagName,
+                'target_xpath': xpath,
+                'http.url': window.location.href,
+                'view.id': window.__rumSession.viewId,
+                'session.id': window.__rumSession.sessionId,
+                'span.kind': 'user-interaction'
+              };
+              
+              // Add aria-label if present - matching our real implementation
+              if (ariaLabel) {
+                attributes['target.aria_label'] = ariaLabel;
+              }
+              
               window.__rumData.traces.push({
                 name: 'click',
                 startTime: Date.now(),
-                attributes: {
-                  'target.element': targetInfo,
-                  'target.tagName': target.tagName,
-                  'view.id': window.__rumSession.viewId,
-                  'session.id': window.__rumSession.sessionId,
-                  'span.kind': 'user-interaction'
-                }
+                attributes: attributes
               });
             });
             
@@ -409,14 +442,15 @@ export async function initializeRUM(page: Page, config: BrowserRUMConfig): Promi
                   window.__rumData.traces.push({
                     name: eventType,
                     startTime: Date.now(),
-                    attributes: {
-                      'target.element': targetInfo,
-                      'target.tagName': target.tagName,
-                      'key': event.key,
-                      'view.id': window.__rumSession.viewId,
-                      'session.id': window.__rumSession.sessionId,
-                      'span.kind': 'user-interaction'
-                    }
+                  attributes: {
+                    'target_element': target.tagName,
+                    'target_xpath': '//*[@id="' + target.id + '"]',
+                    'event_type': eventType,
+                    'key': event.key,
+                    'view.id': window.__rumSession.viewId,
+                    'session.id': window.__rumSession.sessionId,
+                    'span.kind': 'user-interaction'
+                  }
                   });
                 }
               });

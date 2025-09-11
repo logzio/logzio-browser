@@ -6,6 +6,9 @@ export const ATTR_VIEW_ID = 'view.id';
 export const ATTR_USER_CONTEXT = 'user.context';
 export const ATTR_CUSTOM_ATTRIBUTES = 'custom.attributes';
 
+/* User interaction attributes */
+export const ATTR_TARGET_ARIA_LABEL = 'target_aria_label';
+
 /* Frustration attributes */
 export const ATTR_FRUSTRATION_TYPE = 'frustration.type';
 export const ATTR_FRUSTRATION_DEAD_CLICK = 'frustration.dead_click';

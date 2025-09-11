@@ -22,6 +22,7 @@ import { RUMConfig } from '../config';
 import {
   ATTR_FRUSTRATION_RAGE_CLICKS_COUNT,
   ATTR_FRUSTRATION_TYPE,
+  ATTR_TARGET_ARIA_LABEL,
   FrustrationType,
   SpanName,
 } from './semconv';
@@ -208,16 +209,23 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
     }
 
     const xpath = getElementXPath(element, true);
+    const ariaLabel = element.ariaLabel;
+
     try {
+      const attributes: Record<string, any> = {
+        [otelAttributeNames.EVENT_TYPE]: eventName,
+        [otelAttributeNames.TARGET_ELEMENT]: element.tagName,
+        [otelAttributeNames.TARGET_XPATH]: xpath,
+        [otelAttributeNames.HTTP_URL]: url,
+      };
+      if (ariaLabel) {
+        attributes[ATTR_TARGET_ARIA_LABEL] = ariaLabel;
+      }
+
       const span = this.tracer.startSpan(
         spanName,
         {
-          attributes: {
-            [otelAttributeNames.EVENT_TYPE]: eventName,
-            [otelAttributeNames.TARGET_ELEMENT]: element.tagName,
-            [otelAttributeNames.TARGET_XPATH]: xpath,
-            [otelAttributeNames.HTTP_URL]: url,
-          },
+          attributes,
         },
         // prettier-ignore
         parentSpan
