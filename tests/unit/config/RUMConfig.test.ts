@@ -20,18 +20,19 @@ jest.mock('@src/shared', () => {
 
 describe('RUMConfig', () => {
   it('should create a valid RUMConfig with default values', () => {
-    const config = new RUMConfig({
+    const confOptions = {
       region: 'eu',
       tokens: {
         traces: 'trace-token',
         logs: 'logs-token',
         metrics: 'metrics-token',
       },
-    });
-    expect(config.region).toBe(config.region);
-    expect(config.tokens.logs).toBe(config.tokens.logs);
-    expect(config.tokens.metrics).toBe(config.tokens.metrics);
-    expect(config.tokens.traces).toBe(config.tokens.traces);
+    };
+    const config = new RUMConfig(confOptions);
+    expect(config.region).toBe(confOptions.region);
+    expect(config.tokens.logs).toBe(confOptions.tokens.logs);
+    expect(config.tokens.metrics).toBe(confOptions.tokens.metrics);
+    expect(config.tokens.traces).toBe(confOptions.tokens.traces);
     expect(config.service!.name).toBe(DEFAULT_SERVICE_NAME);
     expect(config.service!.version).toBe(DEFAULT_SERVICE_VERSION);
     expect(config.session!.maxDurationMs).toBe(DEFAULT_SESSION_MAX_DURATION_MS);
