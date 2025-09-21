@@ -42,6 +42,7 @@ export class RUMSessionManager {
   private renewWithNewSessionId(): void {
     this.view?.end();
     this.sessionId = this.generateNewSessionId();
+    rumLogger.debug(`Starting a new session ${this.getSessionId()}.`);
     this.startTime = Date.now();
     this.resetDurationTimer();
     this.startView();
@@ -53,6 +54,7 @@ export class RUMSessionManager {
   public renew(): void {
     this.view?.end();
     this.init();
+    rumLogger.debug(`Renewing session ${this.getSessionId()}.`);
     this.startView();
   }
 
