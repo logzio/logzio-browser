@@ -6,3 +6,4 @@ export const MAX_SAMPLING_PERCENTAGE = 100;
 export const MIN_SAMPLING_PERCENTAGE = 0;
 export const LOGZIO_REGION_HEADER = 'LOGZIO-REGION';
 export const AUTHORIZATION_HEADER = 'Authorization';
+export const LOGZIO_DATA_TYPE_HEADER = 'LOGZIO-DATA-TYPE';

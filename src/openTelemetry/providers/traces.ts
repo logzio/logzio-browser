@@ -21,6 +21,7 @@ import {
   MAX_SPAN_WAIT_MS,
   LOGZIO_REGION_HEADER,
   AUTHORIZATION_HEADER,
+  LOGZIO_DATA_TYPE_HEADER,
 } from './constants';
 
 export function getTraceProvider(
@@ -62,6 +63,7 @@ function getTraceExporter(endpoint: string, config: RUMConfig): SpanExporter {
     headers: {
       [LOGZIO_REGION_HEADER]: config.region,
       [AUTHORIZATION_HEADER]: getAuthorizationHeader(config.tokens.traces),
+      [LOGZIO_DATA_TYPE_HEADER]: 'traces',
     },
   });
 }

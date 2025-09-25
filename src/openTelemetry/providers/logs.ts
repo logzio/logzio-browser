@@ -14,6 +14,7 @@ import {
   MAX_LOG_WAIT_MS,
   LOGZIO_REGION_HEADER,
   AUTHORIZATION_HEADER,
+  LOGZIO_DATA_TYPE_HEADER,
 } from './constants';
 
 export function getLogProvider(
@@ -43,6 +44,7 @@ function getLogExporter(endpoint: string, config: RUMConfig): LogRecordExporter 
     headers: {
       [LOGZIO_REGION_HEADER]: config.region,
       [AUTHORIZATION_HEADER]: getAuthorizationHeader(config.tokens.logs),
+      [LOGZIO_DATA_TYPE_HEADER]: 'logs',
     },
   });
 }
