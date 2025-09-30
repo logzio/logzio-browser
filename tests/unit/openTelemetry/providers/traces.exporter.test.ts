@@ -1,4 +1,8 @@
-import { AUTHORIZATION_HEADER, LOGZIO_REGION_HEADER } from '@src/openTelemetry/providers/constants';
+import {
+  AUTHORIZATION_HEADER,
+  LOGZIO_REGION_HEADER,
+  LOGZIO_DATA_TYPE_HEADER,
+} from '@src/openTelemetry/providers/constants';
 import { getTraceProvider } from '../../../../src/openTelemetry/providers/traces';
 import {
   setupTracesTest,
@@ -104,6 +108,7 @@ describe('Traces Provider - Exporter Configuration', () => {
     expect(options.headers).toEqual({
       [LOGZIO_REGION_HEADER]: config.region,
       [AUTHORIZATION_HEADER]: `Bearer ${config.tokens.traces}`,
+      [LOGZIO_DATA_TYPE_HEADER]: 'traces',
     });
   });
 

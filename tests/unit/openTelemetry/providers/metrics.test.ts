@@ -1,6 +1,7 @@
 import {
   AUTHORIZATION_HEADER,
   LOGZIO_REGION_HEADER,
+  LOGZIO_DATA_TYPE_HEADER,
   MAX_METRIC_WAIT_MS,
 } from '@src/openTelemetry/providers/constants';
 import { ATTR_SESSION_ID, ATTR_VIEW_ID } from '@src/instrumentation';
@@ -140,6 +141,7 @@ describe('metrics provider', () => {
     expect(options.headers).toEqual({
       [LOGZIO_REGION_HEADER]: 'us',
       [AUTHORIZATION_HEADER]: getAuthorizationHeader('m'),
+      [LOGZIO_DATA_TYPE_HEADER]: 'metrics',
     });
   });
 

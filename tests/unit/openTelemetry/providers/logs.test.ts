@@ -3,6 +3,7 @@ import {
   MAX_BULK_SIZE,
   MAX_LOG_WAIT_MS,
   AUTHORIZATION_HEADER,
+  LOGZIO_DATA_TYPE_HEADER,
 } from '../../../../src/openTelemetry/providers/constants';
 import { getAuthorizationHeader } from '@src/utils/helpers';
 
@@ -159,6 +160,7 @@ describe('logs provider', () => {
     expect(options.headers).toEqual({
       [LOGZIO_REGION_HEADER]: 'us',
       [AUTHORIZATION_HEADER]: getAuthorizationHeader('t'),
+      [LOGZIO_DATA_TYPE_HEADER]: 'logs',
     });
   });
 
