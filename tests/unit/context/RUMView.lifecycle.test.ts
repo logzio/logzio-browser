@@ -100,6 +100,7 @@ describe('RUMView lifecycle and events', () => {
     const startEvent = emitMock.mock.calls[0][0];
     expect(startEvent.severityText).toBe('INFO');
     expect(startEvent.attributes['url.path']).toBe(window.location.href);
+    expect(startEvent.attributes['request.path']).toBe(new URL(window.location.href).pathname);
     expect(startEvent.attributes['event.type']).toBe('view_start');
     expect(startEvent.attributes['session.id']).toBe('sess-9');
     expect(typeof startEvent.attributes['view.id']).toBe('string');
@@ -109,6 +110,7 @@ describe('RUMView lifecycle and events', () => {
     const endEvent = emitMock.mock.calls[1][0];
     expect(endEvent.severityText).toBe('INFO');
     expect(endEvent.attributes['url.path']).toBe(window.location.href);
+    expect(endEvent.attributes['request.path']).toBe(new URL(window.location.href).pathname);
     expect(typeof endEvent.attributes.duration).toBe('number');
     expect(endEvent.attributes['event.type']).toBe('view_end');
     expect(endEvent.attributes['session.id']).toBe('sess-9');

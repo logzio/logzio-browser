@@ -1,7 +1,7 @@
 import { Logger, logs } from '@opentelemetry/api-logs';
 import { AttributeNames as otelAttributeNames } from '@opentelemetry/instrumentation-user-interaction';
 import { ATTR_URL_PATH } from '@opentelemetry/semantic-conventions';
-import { ATTR_SESSION_ID, ATTR_VIEW_ID } from '../instrumentation';
+import { ATTR_SESSION_ID, ATTR_VIEW_ID, ATTR_REQUEST_PATH } from '../instrumentation';
 import { WebVitalsAggregator } from '../aggregations/WebVitalsAggregator';
 import type { RUMConfig } from '../config';
 import { generateId } from '../utils';
@@ -106,8 +106,10 @@ export class RUMView {
    * @returns The attributes to add to the view event.
    */
   private getAttributes(eventType: string): Record<string, any> {
+    const urlObj = new URL(this.url);
     return {
       [ATTR_URL_PATH]: this.url,
+      [ATTR_REQUEST_PATH]: urlObj.pathname,
       startTime: this.startTime,
       [ATTR_SESSION_ID]: this.sessionId,
       [ATTR_VIEW_ID]: this.viewId,

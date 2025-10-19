@@ -14,9 +14,9 @@ import {
 import { metrics, type Histogram } from '@opentelemetry/api';
 import { MeterProvider } from '@opentelemetry/sdk-metrics';
 import { ATTR_URL_PATH } from '@opentelemetry/semantic-conventions';
-import { LOGZIO_RUM_PROVIDER_NAME, rumLogger } from '../shared';
+import { LOGZIO_RUM_PROVIDER_NAME, LOGZIO_RUM_METRICS_PREFIX, rumLogger } from '../shared';
 import { setIfDefined } from '../utils/helpers';
-import { ATTR_SESSION_ID, ATTR_VIEW_ID } from '../instrumentation';
+import { ATTR_SESSION_ID, ATTR_VIEW_ID, ATTR_REQUEST_PATH } from '../instrumentation';
 
 /**
  * This class represents the web vitals aggregator.
@@ -97,9 +97,11 @@ export class WebVitalsAggregator {
    * @param metric - The metric to record.
    */
   private recordMetric(metric: MetricWithAttribution): void {
+    const urlObj = new URL(window.location.href);
     const attributes: Record<string, any> = {
       'metric.rating': metric.rating,
       [ATTR_URL_PATH]: window.location.href,
+      [ATTR_REQUEST_PATH]: urlObj.pathname,
       'navigation.type': metric.navigationType || 'unknown',
       [ATTR_SESSION_ID]: this.sessionId,
       [ATTR_VIEW_ID]: this.viewId,
@@ -118,7 +120,7 @@ export class WebVitalsAggregator {
    * @returns The cached or newly created histogram.
    */
   private getOrCreateHistogram(metricName: string, unit: string): Histogram {
-    const name = `web.vitals.${metricName.toLowerCase()}`;
+    const name = `${LOGZIO_RUM_METRICS_PREFIX}_${metricName.toLowerCase()}`;
     let histogram = this.histograms[name];
     if (!histogram) {
       histogram = this.meter.createHistogram(name, {

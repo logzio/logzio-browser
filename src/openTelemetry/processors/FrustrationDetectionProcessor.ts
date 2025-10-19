@@ -2,7 +2,7 @@ import { ReadableSpan, SpanProcessor, Span } from '@opentelemetry/sdk-trace-base
 import { Context, HrTime, metrics } from '@opentelemetry/api';
 import { AttributeNames } from '@opentelemetry/instrumentation-document-load';
 import { RUMConfig } from '../../config';
-import { rumLogger, LOGZIO_RUM_PROVIDER_NAME } from '../../shared';
+import { rumLogger, LOGZIO_RUM_PROVIDER_NAME, LOGZIO_RUM_METRICS_PREFIX } from '../../shared';
 import {
   ATTR_FRUSTRATION_TYPE,
   ATTR_FRUSTRATION_DEAD_CLICK,
@@ -16,7 +16,7 @@ import {
 } from '../../instrumentation';
 
 export class FrustrationDetectionProcessor implements SpanProcessor {
-  private readonly FRUSTRATION_COUNT_METRIC_NAME: string = 'frustration_count';
+  private readonly FRUSTRATION_COUNT_METRIC_NAME: string = `${LOGZIO_RUM_METRICS_PREFIX}_frustration_count`;
   private readonly FRUSTRATION_LOAD_DURATION_MS_ATTRIBUTE_NAME: string =
     'frustration.load_duration_ms';
   private readonly UNKNOWN_VALUE_FALLBACK: string = 'unknown';

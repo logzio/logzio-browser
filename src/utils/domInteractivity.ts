@@ -196,3 +196,29 @@ function hasPointerCursor(element: HTMLElement): boolean {
   const computedStyle = getComputedStyle(element);
   return computedStyle.cursor === 'pointer';
 }
+
+/**
+ * Finds the closest actionable ancestor element that should be tracked for user interactions.
+ * Walks up the DOM tree from the given element to find the first clickable ancestor.
+ *
+ * @param element - The starting element (typically event.target)
+ * @returns The closest actionable ancestor, or null if none found
+ */
+export function findActionableAncestor(element: HTMLElement): HTMLElement | null {
+  let current: HTMLElement | null = element;
+
+  // Walk up the DOM tree, but limit traversal to avoid infinite loops
+  let depth = 0;
+  const MAX_TRAVERSAL_DEPTH = 10;
+
+  while (current && depth < MAX_TRAVERSAL_DEPTH) {
+    if (isClickableElement(current)) {
+      return current;
+    }
+
+    current = current.parentElement;
+    depth++;
+  }
+
+  return null;
+}

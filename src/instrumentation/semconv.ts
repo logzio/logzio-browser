@@ -9,6 +9,9 @@ export const ATTR_CUSTOM_ATTRIBUTES = 'custom.attributes';
 /* User interaction attributes */
 export const ATTR_TARGET_ARIA_LABEL = 'target_aria_label';
 
+/* URL request path attributes */
+export const ATTR_REQUEST_PATH = 'request.path';
+
 /* Frustration attributes */
 export const ATTR_FRUSTRATION_TYPE = 'frustration.type';
 export const ATTR_FRUSTRATION_DEAD_CLICK = 'frustration.dead_click';

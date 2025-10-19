@@ -65,7 +65,7 @@ describe('WebVitalsAggregator - processing and flush', () => {
 
     expect(getMeterMock).toHaveBeenCalled();
     expect(createHistogramMock).toHaveBeenCalledWith(
-      'web.vitals.fcp',
+      'logzio_rum_fcp',
       expect.objectContaining({ unit: 'ms' }),
     );
     expect(histogramRecordMock).toHaveBeenCalledWith(
@@ -80,7 +80,7 @@ describe('WebVitalsAggregator - processing and flush', () => {
     clsCb?.({ name: 'CLS', value: 0.02, attribution: {} });
     agg.flushMetrics();
     expect(createHistogramMock).toHaveBeenCalledWith(
-      'web.vitals.cls',
+      'logzio_rum_cls',
       expect.objectContaining({ unit: 'unitless' }),
     );
   });

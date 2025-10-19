@@ -1,8 +1,17 @@
+import { Logger, logs } from '@opentelemetry/api-logs';
+import { AttributeNames as otelAttributeNames } from '@opentelemetry/instrumentation-user-interaction';
 import type { RUMConfig } from '../config';
 import { generateId, LocalStorageStore } from '../utils';
-import { EventListener, DOM_EVENT, ACTIVITY_EVENTS, rumLogger } from '../shared';
+import {
+  EventListener,
+  DOM_EVENT,
+  ACTIVITY_EVENTS,
+  rumLogger,
+  LOGZIO_RUM_PROVIDER_NAME,
+} from '../shared';
 import { OpenTelemetryProvider } from '../openTelemetry/setup';
 import { NavigationEventType, NavigationTracker } from '../instrumentation/trackers';
+import { ATTR_SESSION_ID } from '../instrumentation';
 import { RUMView } from './RUMView';
 import type { ActiveViewInfo } from './types';
 
@@ -13,7 +22,9 @@ import type { ActiveViewInfo } from './types';
 export class RUMSessionManager {
   private static readonly LOGZIO_SESSION_ID: string = 'logzio-rum-session-id';
   private static readonly LOGZIO_LAST_ACTIVITY: string = 'logzio-rum-last-activity';
+  private static readonly LOGZIO_ACTIVE_TABS: string = 'logzio-rum-active-tabs';
   private static readonly LAST_ACTIVITY_CHECK_INTERVAL: number = 10000; // 10 seconds
+  private static readonly SESSION_END_EVENT_NAME = 'session_end';
 
   private sessionId: string | null = null;
   private startTime: number | null = null;
@@ -21,6 +32,7 @@ export class RUMSessionManager {
   private view: RUMView | null = null;
   private eventListeners: EventListener[] = [];
   private inactivityInterval: ReturnType<typeof setInterval> | null = null;
+  private logsProvider: Logger = logs.getLogger(LOGZIO_RUM_PROVIDER_NAME);
 
   constructor(private readonly config: RUMConfig) {}
 
@@ -30,6 +42,7 @@ export class RUMSessionManager {
   public start(): void {
     this.init();
     rumLogger.debug(`Starting session ${this.getSessionId()}.`);
+    this.incrementActiveTabs();
     this.setupEventsListeners();
     this.startView();
     this.updateActivityTime();
@@ -41,6 +54,7 @@ export class RUMSessionManager {
    */
   private renewWithNewSessionId(): void {
     this.view?.end();
+    this.generateSessionEndEvent();
     this.sessionId = this.generateNewSessionId();
     rumLogger.debug(`Starting a new session ${this.getSessionId()}.`);
     this.startTime = Date.now();
@@ -98,6 +112,38 @@ export class RUMSessionManager {
   }
 
   /**
+   * Handles page unload event using tab counter to detect if this is the last tab.
+   * Uses localStorage-based tab counting for reliable detection.
+   */
+  private handlePageUnload(): void {
+    this.end();
+    this.decrementActiveTabs();
+    const remainingTabs = this.getActiveTabsCount();
+
+    if (remainingTabs === 0) {
+      this.generateSessionEndEvent();
+    }
+  }
+
+  /**
+   * Generates a session end event to indicate the session has ended.
+   * This event is always called by the tab which started the session, since it started first.
+   * Other tabs will not generate this event, since they will never timeout or reach max duration prior to the first tab.
+   */
+  private generateSessionEndEvent(): void {
+    if (this.config.enable?.viewEvents) {
+      this.logsProvider.emit({
+        severityText: 'INFO',
+        attributes: {
+          [ATTR_SESSION_ID]: this.sessionId,
+          [otelAttributeNames.EVENT_TYPE]: RUMSessionManager.SESSION_END_EVENT_NAME,
+          duration: this.getDuration(),
+        },
+      });
+    }
+  }
+
+  /**
    * Resumes the session if was inactive for a while.
    * If the session was timed out, renews it.
    */
@@ -140,9 +186,43 @@ export class RUMSessionManager {
   }
 
   /**
+   * Increments the active tabs counter.
+   */
+  private incrementActiveTabs(): void {
+    const currentCount = this.getActiveTabsCount();
+    LocalStorageStore.set(RUMSessionManager.LOGZIO_ACTIVE_TABS, String(currentCount + 1));
+  }
+
+  /**
+   * Decrements the active tabs counter.
+   */
+  private decrementActiveTabs(): void {
+    const currentCount = this.getActiveTabsCount();
+    if (currentCount > 0) {
+      LocalStorageStore.set(RUMSessionManager.LOGZIO_ACTIVE_TABS, String(currentCount - 1));
+    }
+  }
+
+  /**
+   * Gets the current active tabs count.
+   */
+  private getActiveTabsCount(): number {
+    const count = LocalStorageStore.get(RUMSessionManager.LOGZIO_ACTIVE_TABS);
+    return count ? parseInt(count, 10) : 0;
+  }
+
+  /**
+   * Clears the active tabs counter.
+   */
+  private clearActiveTabsCount(): void {
+    LocalStorageStore.remove(RUMSessionManager.LOGZIO_ACTIVE_TABS);
+  }
+
+  /**
    * Times out the session.
    */
   private timeoutSession(): void {
+    this.generateSessionEndEvent();
     this.end();
     this.clearSessionId();
   }
@@ -181,7 +261,7 @@ export class RUMSessionManager {
       window,
       DOM_EVENT.BEFORE_UNLOAD,
       () => {
-        this.end();
+        this.handlePageUnload();
       },
       { once: true },
     );
@@ -340,6 +420,7 @@ export class RUMSessionManager {
     this.clearInactivityTimeoutInterval();
     this.clearSessionId();
     this.clearLastActivityTime();
+    this.clearActiveTabsCount();
 
     this.eventListeners.forEach((eventListener) => {
       eventListener.remove();

@@ -23,6 +23,7 @@ import {
   ATTR_CODE_LINE_NUMBER,
   ATTR_URL_PATH,
 } from '@opentelemetry/semantic-conventions';
+import { ATTR_REQUEST_PATH } from '../../../src/instrumentation/semconv';
 
 // Stub ErrorTracker singleton and capture subscribe callback
 const subscribeMock = jest.fn();
@@ -95,6 +96,7 @@ describe('ErrorTrackingInstrumentation', () => {
       expect(startArgs.attributes[ATTR_CODE_LINE_NUMBER]).toBe(10);
       expect(startArgs.attributes[ATTR_CODE_COLUMN_NUMBER]).toBe(20);
       expect(startArgs.attributes[ATTR_URL_PATH]).toBe(window.location.href);
+      expect(startArgs.attributes[ATTR_REQUEST_PATH]).toBe(new URL(window.location.href).pathname);
     });
   });
 

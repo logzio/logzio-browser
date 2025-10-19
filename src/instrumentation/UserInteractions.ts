@@ -9,7 +9,7 @@ import {
 import { getElementXPath } from '@opentelemetry/sdk-trace-web';
 import { TimeBoundQueue } from '../utils';
 import { EventMonitor, EventsCounter } from '../utils/EventCounter';
-import { isClickableElement, isPassiveInteractiveControl } from '../utils/domInteractivity';
+import { isPassiveInteractiveControl, findActionableAncestor } from '../utils/domInteractivity';
 import {
   DOM_EVENT,
   EventListener,
@@ -23,6 +23,7 @@ import {
   ATTR_FRUSTRATION_RAGE_CLICKS_COUNT,
   ATTR_FRUSTRATION_TYPE,
   ATTR_TARGET_ARIA_LABEL,
+  ATTR_REQUEST_PATH,
   FrustrationType,
   SpanName,
 } from './semconv';
@@ -32,6 +33,8 @@ import {
   NavigationEventData,
   MutationObserverTracker,
 } from './trackers';
+
+const NAVIGATION_CLICK_THRESHOLD_MS = 100;
 
 /* If we want to support monitoring other events in the future. */
 const DEFAULT_INSTRUMENTED_EVENTS: EventName[] = [DOM_EVENT.CLICK];
@@ -92,6 +95,7 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
   private navigationUnsubscribe: (() => void) | null = null;
   private trackNavigation?: boolean;
   private navEvent: NavigationEventData | null = null;
+  private pendingClick: ClickEvent | null = null;
 
   constructor(config: LogzioUserInteractionInstrumentationConfig) {
     super(
@@ -197,8 +201,9 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
       return undefined;
     }
 
-    // Only track clicks on potentially interactive elements for dead click detection
-    if (!this.isClickableElement(element)) {
+    // Find the actionable element - either the target itself or closest actionable ancestor
+    const actionableElement = findActionableAncestor(element);
+    if (!actionableElement) {
       return undefined;
     }
 
@@ -208,15 +213,17 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
       this.navEvent = null;
     }
 
-    const xpath = getElementXPath(element, true);
-    const ariaLabel = element.ariaLabel;
+    const xpath = getElementXPath(actionableElement, true);
+    const ariaLabel = actionableElement.ariaLabel;
 
     try {
+      const urlObj = new URL(url);
       const attributes: Record<string, any> = {
         [otelAttributeNames.EVENT_TYPE]: eventName,
-        [otelAttributeNames.TARGET_ELEMENT]: element.tagName,
+        [otelAttributeNames.TARGET_ELEMENT]: actionableElement.tagName,
         [otelAttributeNames.TARGET_XPATH]: xpath,
         [otelAttributeNames.HTTP_URL]: url,
+        [ATTR_REQUEST_PATH]: urlObj.pathname,
       };
       if (ariaLabel) {
         attributes[ATTR_TARGET_ARIA_LABEL] = ariaLabel;
@@ -238,7 +245,7 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
         this._shouldPreventSpanCreation = defaultShouldPreventSpanCreation;
       }
 
-      if (this._shouldPreventSpanCreation(eventName, element, span) === true) {
+      if (this._shouldPreventSpanCreation(eventName, actionableElement, span) === true) {
         return undefined;
       }
 
@@ -261,10 +268,17 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
     const now = Date.now();
     const target = event?.target;
 
+    // Clear any existing pending click that's too old
+    if (this.pendingClick && now - this.pendingClick.startTime > NAVIGATION_CLICK_THRESHOLD_MS) {
+      this.pendingClick = null;
+    }
+
     let spanName: string = SpanName.CLICK;
     if (this.navEvent) {
       const formattedUrl = this.formatUrlForNavigation(this.navEvent.newUrl);
       spanName = `${SpanName.NAVIGATION}: ${formattedUrl}`;
+      // Clear the nav event after using it
+      this.navEvent = null;
     }
 
     const span = this.createSpan(target, spanName, SpanName.CLICK);
@@ -275,6 +289,11 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
     const click = this.createNewClickEvent(span, spanName, target as HTMLElement, now);
     this.addClickToHistory(click);
     this.isRageClick(click);
+
+    // If this is a regular click (not already named as navigation), track it as pending
+    if (spanName === SpanName.CLICK && this.trackNavigation) {
+      this.pendingClick = click;
+    }
 
     // Start idle window logic for finalization
     this.scheduleClickFinalization(click);
@@ -330,7 +349,31 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
    * @param event the navigation event details.
    */
   private onNavigation(event: NavigationEventData): void {
-    if (this.trackNavigation) {
+    if (!this.trackNavigation) {
+      return;
+    }
+
+    const now = Date.now();
+
+    // Check if we have a recent pending click that likely triggered this navigation
+    if (this.pendingClick && now - this.pendingClick.startTime <= NAVIGATION_CLICK_THRESHOLD_MS) {
+      // Rename the pending click span to indicate it caused navigation
+      const formattedUrl = this.formatUrlForNavigation(event.newUrl);
+      const navigationSpanName = `${SpanName.NAVIGATION}: ${formattedUrl}`;
+
+      // Update the span name and attributes
+      this.pendingClick.span.updateName(navigationSpanName);
+      this.pendingClick.spanName = navigationSpanName;
+
+      // Update the URL attribute to use the old URL (where the click happened)
+      this.pendingClick.span.setAttribute('http.url', event.oldUrl);
+      const oldUrlObj = new URL(event.oldUrl);
+      this.pendingClick.span.setAttribute(ATTR_REQUEST_PATH, oldUrlObj.pathname);
+
+      // Clear the pending click since we've processed it
+      this.pendingClick = null;
+    } else {
+      // No recent pending click, store the nav event for the next click
       this.navEvent = event;
     }
   }
@@ -448,6 +491,11 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
       click.idleTimeout = undefined;
     }
 
+    // Clear pending click reference if this is the pending click
+    if (this.pendingClick === click) {
+      this.pendingClick = null;
+    }
+
     const counters = click.counter.stop();
     this.isErrorClick(click, counters);
     if (click.spanName === SpanName.CLICK) {
@@ -459,15 +507,6 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
     }
 
     click.span.end();
-  }
-
-  /**
-   * Determines if an element is potentially clickable and should be tracked for dead clicks.
-   * @param element the HTML element to check
-   * @returns true if the element should be tracked for dead click detection
-   */
-  private isClickableElement(element: HTMLElement): boolean {
-    return isClickableElement(element);
   }
 
   /**

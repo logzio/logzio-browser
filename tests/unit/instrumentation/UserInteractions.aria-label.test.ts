@@ -20,6 +20,7 @@ describe('UserInteractions Aria Label Support', () => {
         'target.element': 'BUTTON',
         'target.xpath': '/html/body/button',
         'http.url': 'http://localhost',
+        'request.path': '/',
       };
 
       // Simulate the logic from createSpan method
@@ -41,6 +42,7 @@ describe('UserInteractions Aria Label Support', () => {
         'target.element': 'BUTTON',
         'target.xpath': '/html/body/button',
         'http.url': 'http://localhost',
+        'request.path': '/',
       };
 
       // Simulate the logic from createSpan method
@@ -60,6 +62,7 @@ describe('UserInteractions Aria Label Support', () => {
         'target.element': 'BUTTON',
         'target.xpath': '/html/body/button',
         'http.url': 'http://localhost',
+        'request.path': '/',
       };
 
       // Simulate the logic from createSpan method (empty string is falsy)
@@ -79,6 +82,7 @@ describe('UserInteractions Aria Label Support', () => {
         'target.element': 'BUTTON',
         'target.xpath': '/html/body/button',
         'http.url': 'http://localhost',
+        'request.path': '/',
       };
 
       // Simulate the logic from createSpan method
