@@ -33,8 +33,6 @@ const enum DataType {
  * It sets up the OpenTelemetry providers and instrumentations.
  */
 export class OpenTelemetryProvider {
-  private static readonly ENDPOINT = 'https://whatever/third/party/logzio/endpoint';
-
   private static instance: OpenTelemetryProvider | null = null;
 
   private traceProvider: WebTracerProvider;
@@ -66,23 +64,9 @@ export class OpenTelemetryProvider {
    * @returns The resolved endpoint URL.
    */
   private getEndpointUrl(dataType: DataType): string {
-    let baseEndpoint = OpenTelemetryProvider.ENDPOINT;
-
-    // Use custom endpoint if provided and valid
-    if (this.config.customEndpoint!.url) {
-      try {
-        new URL(this.config.customEndpoint!.url);
-        baseEndpoint = this.config.customEndpoint!.url;
-        baseEndpoint = baseEndpoint.replace(/\/$/, '');
-        return this.config.customEndpoint!.addSuffix ? `${baseEndpoint}/${dataType}` : baseEndpoint;
-      } catch (_error) {
-        rumLogger.warn(
-          `Invalid custom endpoint URL "${this.config.customEndpoint!.url}". Falling back to default endpoint.`,
-        );
-      }
-    }
-
-    return `${baseEndpoint}/${dataType}`;
+    let baseEndpoint = this.config.endpoint.url;
+    baseEndpoint = baseEndpoint.replace(/\/$/, '');
+    return this.config.endpoint.addSuffix ? `${baseEndpoint}/${dataType}` : baseEndpoint;
   }
 
   /**

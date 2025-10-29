@@ -10,7 +10,7 @@ export function startRUM(collectorPort: number, overrides: Partial<RUMConfigOpti
       // metrics: 'test-metrics-token', // Disabled in jsdom to avoid OTEL metrics init
       logs: 'test-logs-token',
     },
-    customEndpoint: {
+    endpoint: {
       url: `http://127.0.0.1:${collectorPort}`,
       addSuffix: true,
     },
@@ -53,7 +53,7 @@ export function startRUM(collectorPort: number, overrides: Partial<RUMConfigOpti
       ...testConfig.frustrationThresholds,
       ...overrides.frustrationThresholds,
     },
-    customEndpoint: { ...testConfig.customEndpoint, ...overrides.customEndpoint },
+    endpoint: { ...testConfig.endpoint, ...overrides.endpoint },
   } as RUMConfigOptions;
 
   LogzioRUM.init(finalConfig);

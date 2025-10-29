@@ -27,6 +27,9 @@ describe('RUMConfig', () => {
         logs: 'logs-token',
         metrics: 'metrics-token',
       },
+      endpoint: {
+        url: 'https://example.com',
+      },
     };
     const config = new RUMConfig(confOptions);
     expect(config.region).toBe(confOptions.region);
@@ -53,6 +56,7 @@ describe('RUMConfig', () => {
     const customConfig = {
       region: 'us',
       tokens: { logs: 'log-token', metrics: 'metric-token', traces: 'trace-token' },
+      endpoint: { url: 'https://custom.endpoint.com' },
       service: { name: 'test', version: '1.2.3' },
       session: { maxDurationMs: 7200, timeoutMs: 600_000 },
       enable: {
@@ -92,6 +96,7 @@ describe('RUMConfig', () => {
     const config = new RUMConfig({
       region: 'us',
       tokens: { traces: 'trace-token' },
+      endpoint: { url: 'https://example.com' },
       enable: { errorTracking: false, webVitals: false },
     });
     expect(config.tokens.logs).toBe('');
@@ -108,6 +113,12 @@ describe('RUMConfig', () => {
     expect(() => new RUMConfig({ region: 'eu', tokens: { logs: 'logs-token' } as any })).toThrow(
       'Traces token is required in RUM configuration.',
     );
+    expect(() => new RUMConfig({ region: 'eu', tokens: { traces: 'trace-token' } })).toThrow(
+      'Endpoint URL is required in RUM configuration.',
+    );
+    expect(
+      () => new RUMConfig({ region: 'eu', tokens: { traces: 'trace-token' }, endpoint: {} as any }),
+    ).toThrow('Endpoint URL is required in RUM configuration.');
   });
 
   it('should warn and disable metrics token is missing and web vitals is enabled', () => {
@@ -116,6 +127,7 @@ describe('RUMConfig', () => {
     const config = new RUMConfig({
       region: 'eu',
       tokens: { traces: 'trace-token' },
+      endpoint: { url: 'https://example.com' },
     });
 
     expect(rumLogger.warn).toHaveBeenCalledWith(
@@ -130,6 +142,7 @@ describe('RUMConfig', () => {
     const config = new RUMConfig({
       region: 'eu',
       tokens: { traces: 'trace-token' },
+      endpoint: { url: 'https://example.com' },
     });
 
     expect(rumLogger.warn).toHaveBeenCalledWith(
@@ -144,6 +157,7 @@ describe('RUMConfig', () => {
     let config = new RUMConfig({
       region: 'us',
       tokens: { traces: 'trace-token' },
+      endpoint: { url: 'https://example.com' },
       session: {
         maxDurationMs: -1,
         timeoutMs: -1000,
@@ -171,6 +185,7 @@ describe('RUMConfig', () => {
     config = new RUMConfig({
       region: 'us',
       tokens: { traces: 'trace-token' },
+      endpoint: { url: 'https://example.com' },
       samplingRate: 101,
       enable: {
         errorTracking: false,
@@ -185,6 +200,7 @@ describe('RUMConfig', () => {
       const debugConfig = new RUMConfig({
         region: 'us',
         tokens: { traces: 'trace-token' },
+        endpoint: { url: 'https://example.com' },
         logLevel: 'debug',
       });
       expect(debugConfig.logLevel).toBe(LogLevel.DEBUG);
@@ -194,6 +210,7 @@ describe('RUMConfig', () => {
       const warnConfig = new RUMConfig({
         region: 'us',
         tokens: { traces: 'trace-token' },
+        endpoint: { url: 'https://example.com' },
         logLevel: 'warn',
       });
       expect(warnConfig.logLevel).toBe(LogLevel.WARN);
@@ -203,6 +220,7 @@ describe('RUMConfig', () => {
       const infoConfig = new RUMConfig({
         region: 'us',
         tokens: { traces: 'trace-token' },
+        endpoint: { url: 'https://example.com' },
         logLevel: 'info',
       });
       expect(infoConfig.logLevel).toBe(LogLevel.INFO);
@@ -212,6 +230,7 @@ describe('RUMConfig', () => {
       const errorConfig = new RUMConfig({
         region: 'us',
         tokens: { traces: 'trace-token' },
+        endpoint: { url: 'https://example.com' },
         logLevel: 'error',
       });
       expect(errorConfig.logLevel).toBe(LogLevel.ERROR);
@@ -221,6 +240,7 @@ describe('RUMConfig', () => {
       const offConfig = new RUMConfig({
         region: 'us',
         tokens: { traces: 'trace-token' },
+        endpoint: { url: 'https://example.com' },
         logLevel: 'off',
       });
       expect(offConfig.logLevel).toBe(LogLevel.OFF);
@@ -230,6 +250,7 @@ describe('RUMConfig', () => {
       const config = new RUMConfig({
         region: 'us',
         tokens: { traces: 'trace-token' },
+        endpoint: { url: 'https://example.com' },
       });
       expect(config.logLevel).toBe(LogLevel.INFO);
     });
@@ -238,70 +259,94 @@ describe('RUMConfig', () => {
       const config = new RUMConfig({
         region: 'us',
         tokens: { traces: 'trace-token' },
+        endpoint: { url: 'https://example.com' },
         logLevel: 'invalid',
       });
       expect(config.logLevel).toBe(LogLevel.INFO);
     });
   });
 
-  describe('customEndpoint', () => {
-    it('should use default values when customEndpoint is not provided', () => {
-      const config = new RUMConfig({
-        region: 'eu',
-        tokens: { traces: 'trace-token' },
-      });
-      expect(config.customEndpoint!.url).toBe('');
-      expect(config.customEndpoint!.addSuffix).toBe(true);
+  describe('endpoint', () => {
+    it('should throw an error when endpoint.url is missing', () => {
+      expect(
+        () =>
+          new RUMConfig({
+            region: 'eu',
+            tokens: { traces: 'trace-token' },
+          }),
+      ).toThrow('Endpoint URL is required in RUM configuration.');
     });
 
-    it('should normalize customEndpoint url by trimming whitespace', () => {
-      const config = new RUMConfig({
-        region: 'eu',
-        tokens: { traces: 'trace-token' },
-        customEndpoint: { url: '  https://custom.endpoint.com  ' },
-      });
-      expect(config.customEndpoint!.url).toBe('https://custom.endpoint.com');
-      expect(config.customEndpoint!.addSuffix).toBe(true);
+    it('should throw an error when endpoint.url is empty', () => {
+      expect(
+        () =>
+          new RUMConfig({
+            region: 'eu',
+            tokens: { traces: 'trace-token' },
+            endpoint: { url: '' },
+          }),
+      ).toThrow('Endpoint URL is required in RUM configuration.');
     });
 
-    it('should handle empty customEndpoint url', () => {
+    it('should throw an error when endpoint.url is invalid', () => {
+      expect(
+        () =>
+          new RUMConfig({
+            region: 'eu',
+            tokens: { traces: 'trace-token' },
+            endpoint: { url: 'invalid-url' },
+          }),
+      ).toThrow('Invalid Endpoint URL "invalid-url".');
+    });
+
+    it('should normalize endpoint url by trimming whitespace', () => {
       const config = new RUMConfig({
         region: 'eu',
         tokens: { traces: 'trace-token' },
-        customEndpoint: { url: '' },
+        endpoint: { url: '  https://custom.endpoint.com  ' },
       });
-      expect(config.customEndpoint!.url).toBe('');
-      expect(config.customEndpoint!.addSuffix).toBe(true);
+      expect(config.endpoint.url).toBe('https://custom.endpoint.com');
+      expect(config.endpoint.addSuffix).toBe(false);
     });
 
     it('should respect addSuffix setting when provided', () => {
       const config = new RUMConfig({
         region: 'eu',
         tokens: { traces: 'trace-token' },
-        customEndpoint: { url: 'https://custom.endpoint.com', addSuffix: false },
+        endpoint: { url: 'https://custom.endpoint.com', addSuffix: false },
       });
-      expect(config.customEndpoint!.url).toBe('https://custom.endpoint.com');
-      expect(config.customEndpoint!.addSuffix).toBe(false);
+      expect(config.endpoint.url).toBe('https://custom.endpoint.com');
+      expect(config.endpoint.addSuffix).toBe(false);
     });
 
-    it('should default addSuffix to true when not provided', () => {
+    it('should default addSuffix to false when not provided', () => {
       const config = new RUMConfig({
         region: 'eu',
         tokens: { traces: 'trace-token' },
-        customEndpoint: { url: 'https://custom.endpoint.com' },
+        endpoint: { url: 'https://custom.endpoint.com' },
       });
-      expect(config.customEndpoint!.url).toBe('https://custom.endpoint.com');
-      expect(config.customEndpoint!.addSuffix).toBe(true);
+      expect(config.endpoint.url).toBe('https://custom.endpoint.com');
+      expect(config.endpoint.addSuffix).toBe(false);
     });
 
-    it('should handle undefined url in customEndpoint object', () => {
-      const config = new RUMConfig({
-        region: 'eu',
-        tokens: { traces: 'trace-token' },
-        customEndpoint: { addSuffix: false },
+    it('should accept valid endpoint URLs', () => {
+      const endpoints = [
+        'https://example.com',
+        'https://example.com/',
+        'http://localhost:3000',
+        'https://custom.endpoint.com/api/v1',
+      ];
+
+      endpoints.forEach((url) => {
+        expect(
+          () =>
+            new RUMConfig({
+              region: 'eu',
+              tokens: { traces: 'trace-token' },
+              endpoint: { url },
+            }),
+        ).not.toThrow();
       });
-      expect(config.customEndpoint!.url).toBe('');
-      expect(config.customEndpoint!.addSuffix).toBe(false);
     });
   });
 });

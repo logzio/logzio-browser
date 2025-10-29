@@ -22,6 +22,7 @@ import { RUMConfigOptions } from './types';
 export class RUMConfig {
   public readonly region: string;
   public readonly tokens: Required<RUMConfigOptions['tokens']>;
+  public readonly endpoint: Required<RUMConfigOptions['endpoint']>;
   public readonly service: Required<RUMConfigOptions['service']>;
   public readonly session: Required<RUMConfigOptions['session']>;
   public readonly enable: Required<RUMConfigOptions['enable']>;
@@ -30,7 +31,6 @@ export class RUMConfig {
   public readonly propagateTraceHeaderCorsUrls: (string | RegExp)[];
   public readonly samplingRate: number;
   public readonly frustrationThresholds: Required<RUMConfigOptions['frustrationThresholds']>;
-  public readonly customEndpoint: Required<RUMConfigOptions['customEndpoint']>;
   public readonly logLevel: LogLevel;
 
   /**
@@ -46,6 +46,10 @@ export class RUMConfig {
       logs: config.tokens!.logs ?? '',
       metrics: config.tokens!.metrics ?? '',
       traces: config.tokens!.traces,
+    };
+    this.endpoint = {
+      url: (config.endpoint?.url || '').trim(),
+      addSuffix: config.endpoint?.addSuffix ?? false,
     };
     this.service = {
       name: config.service?.name ?? DEFAULT_SERVICE_NAME,
@@ -96,10 +100,6 @@ export class RUMConfig {
         DEFAULT_HEAVY_LOAD_THRESHOLD_MS,
       ),
     };
-    this.customEndpoint = {
-      url: (config.customEndpoint?.url || '').trim(),
-      addSuffix: config.customEndpoint?.addSuffix ?? true,
-    };
     this.logLevel = this.getLogLevel(config.logLevel ?? DEFAULT_LOG_LEVEL);
     this.validateConditionalFields();
   }
@@ -133,6 +133,13 @@ export class RUMConfig {
     if (!config.region) throw new Error('Region is required in RUM configuration.');
     if (!config.tokens) throw new Error('Tokens are required in RUM configuration.');
     if (!config.tokens.traces) throw new Error('Traces token is required in RUM configuration.');
+    if (!config.endpoint || !config.endpoint.url)
+      throw new Error('Endpoint URL is required in RUM configuration.');
+    try {
+      new URL(config.endpoint.url);
+    } catch {
+      throw new Error(`Invalid Endpoint URL "${config.endpoint.url}".`);
+    }
   }
 
   /**

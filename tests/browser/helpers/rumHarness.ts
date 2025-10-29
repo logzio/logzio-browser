@@ -7,7 +7,7 @@ export interface BrowserRUMConfig {
     logs?: string;
   };
   region?: string;
-  customEndpoint?: {
+  endpoint?: {
     url: string;
     addSuffix?: boolean;
   };
@@ -40,6 +40,19 @@ export interface BrowserRUMConfig {
  * Initialize RUM library in browser page
  */
 export async function initializeRUM(page: Page, config: BrowserRUMConfig): Promise<void> {
+  // Provide default endpoint if not provided
+  const finalConfig = {
+    ...config,
+    endpoint: config.endpoint || {
+      url: 'http://127.0.0.1:8080',
+      addSuffix: true,
+    },
+    tokens: {
+      traces: 'test-traces-token', // traces is required
+      ...config.tokens,
+    },
+    region: config.region || 'us',
+  };
   // Inject RUM library source (in real scenario, this would be the built bundle)
   await page.addScriptTag({
     content: `
@@ -463,7 +476,7 @@ export async function initializeRUM(page: Page, config: BrowserRUMConfig): Promi
   // Initialize RUM with provided config
   await page.evaluate((config) => {
     (window as any).LogzioRUM.init(config);
-  }, config);
+  }, finalConfig);
 }
 
 /**

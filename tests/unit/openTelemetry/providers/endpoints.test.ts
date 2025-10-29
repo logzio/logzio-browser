@@ -14,18 +14,13 @@ jest.mock('@src/shared', () => {
 });
 
 describe('OpenTelemetryProvider Endpoint Resolution', () => {
-  let mockRumLogger: { warn: jest.Mock };
-
   beforeEach(() => {
     jest.clearAllMocks();
     resetProviderSingleton();
-
-    const shared = require('@src/shared');
-    mockRumLogger = shared.rumLogger;
   });
 
   describe('default endpoint behavior', () => {
-    it('should use default endpoint with suffix when no customEndpoint is provided', () => {
+    it('should use default endpoint with suffix when endpoint is provided', () => {
       const config = new RUMConfig(
         createConfig({
           tokens: { traces: 'trace-token', metrics: 'metrics-token', logs: 'logs-token' },
@@ -58,7 +53,7 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
       const config = new RUMConfig(
         createConfig({
           tokens: { traces: 'trace-token', metrics: 'metrics-token', logs: 'logs-token' },
-          customEndpoint: { url: 'https://custom.endpoint.com', addSuffix: true },
+          endpoint: { url: 'https://custom.endpoint.com', addSuffix: true },
         }) as any,
       );
 
@@ -86,7 +81,7 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
       const config = new RUMConfig(
         createConfig({
           tokens: { traces: 'trace-token', metrics: 'metrics-token', logs: 'logs-token' },
-          customEndpoint: { url: 'https://custom.endpoint.com/', addSuffix: true },
+          endpoint: { url: 'https://custom.endpoint.com/', addSuffix: true },
         }) as any,
       );
 
@@ -116,7 +111,7 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
       const config = new RUMConfig(
         createConfig({
           tokens: { traces: 'trace-token', metrics: 'metrics-token', logs: 'logs-token' },
-          customEndpoint: { url: 'https://custom.endpoint.com/api/v1', addSuffix: false },
+          endpoint: { url: 'https://custom.endpoint.com/api/v1', addSuffix: false },
         }) as any,
       );
 
@@ -141,80 +136,27 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
     });
   });
 
-  describe('invalid custom endpoint', () => {
-    it('should warn and fall back to default endpoint when custom URL is invalid', () => {
-      const config = new RUMConfig(
-        createConfig({
-          tokens: { traces: 'trace-token', metrics: 'metrics-token', logs: 'logs-token' },
-          customEndpoint: { url: 'invalid-url', addSuffix: true },
-        }) as any,
-      );
-
-      const provider = createProviderInstance(config);
-      provider.registerProviders();
-
-      expect(mockRumLogger.warn).toHaveBeenCalledWith(
-        'Invalid custom endpoint URL "invalid-url". Falling back to default endpoint.',
-      );
-      expect(mockGetTraceProvider).toHaveBeenCalledWith(
-        expect.anything(),
-        'https://whatever/third/party/logzio/endpoint/traces',
-        config,
-      );
-      expect(mockGetMetricsProvider).toHaveBeenCalledWith(
-        expect.anything(),
-        'https://whatever/third/party/logzio/endpoint/metrics',
-        config,
-      );
-      expect(mockGetLogProvider).toHaveBeenCalledWith(
-        expect.anything(),
-        'https://whatever/third/party/logzio/endpoint/logs',
-        config,
-      );
-    });
-
-    it('should not throw when custom URL is invalid', () => {
-      const config = new RUMConfig(
-        createConfig({
-          tokens: { traces: 'trace-token' },
-          customEndpoint: { url: 'not-a-url', addSuffix: true },
-        }) as any,
-      );
-
+  describe('invalid endpoint', () => {
+    it('should throw an error when endpoint URL is invalid during config construction', () => {
       expect(() => {
-        const provider = createProviderInstance(config);
-        provider.registerProviders();
-      }).not.toThrow();
+        new RUMConfig(
+          createConfig({
+            tokens: { traces: 'trace-token', metrics: 'metrics-token', logs: 'logs-token' },
+            endpoint: { url: 'invalid-url', addSuffix: true },
+          }) as any,
+        );
+      }).toThrow('Invalid Endpoint URL "invalid-url".');
     });
-  });
 
-  describe('empty custom endpoint', () => {
-    it('should use default endpoint when custom URL is empty', () => {
-      const config = new RUMConfig(
-        createConfig({
-          tokens: { traces: 'trace-token', metrics: 'metrics-token', logs: 'logs-token' },
-          customEndpoint: { url: '', addSuffix: false },
-        }) as any,
-      );
-
-      const provider = createProviderInstance(config);
-      provider.registerProviders();
-
-      expect(mockGetTraceProvider).toHaveBeenCalledWith(
-        expect.anything(),
-        'https://whatever/third/party/logzio/endpoint/traces',
-        config,
-      );
-      expect(mockGetMetricsProvider).toHaveBeenCalledWith(
-        expect.anything(),
-        'https://whatever/third/party/logzio/endpoint/metrics',
-        config,
-      );
-      expect(mockGetLogProvider).toHaveBeenCalledWith(
-        expect.anything(),
-        'https://whatever/third/party/logzio/endpoint/logs',
-        config,
-      );
+    it('should throw an error when endpoint URL is empty during config construction', () => {
+      expect(() => {
+        new RUMConfig(
+          createConfig({
+            tokens: { traces: 'trace-token', metrics: 'metrics-token', logs: 'logs-token' },
+            endpoint: { url: '', addSuffix: false },
+          }) as any,
+        );
+      }).toThrow('Endpoint URL is required in RUM configuration.');
     });
   });
 });

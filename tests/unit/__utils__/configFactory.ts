@@ -35,18 +35,17 @@ export interface TestConfigOverrides {
     timeoutMs?: number;
   };
   customAttributes?: Record<string, any>;
-  customEndpoint?: {
-    url?: string;
+  endpoint: {
+    url: string;
     addSuffix?: boolean;
   };
-  endpoint?: string;
   samplingRate?: number;
 }
 
 /**
  * Creates a valid RUM configuration for testing
  */
-export function createConfig(overrides: TestConfigOverrides = {}) {
+export function createConfig(overrides: Partial<TestConfigOverrides> = {}) {
   return {
     tokens: {
       traces: 'trace-token',
@@ -68,7 +67,11 @@ export function createConfig(overrides: TestConfigOverrides = {}) {
       ...overrides.service,
     },
     region: 'us-east-1',
-    endpoint: 'https://whatever/third/party/logzio/endpoint',
+    endpoint: {
+      url: 'https://whatever/third/party/logzio/endpoint',
+      addSuffix: true,
+      ...overrides.endpoint,
+    },
     environmentData: {
       collectOS: true,
       collectBrowser: true,
@@ -86,10 +89,6 @@ export function createConfig(overrides: TestConfigOverrides = {}) {
       ...overrides.session,
     },
     customAttributes: {},
-    customEndpoint: {
-      url: '',
-      addSuffix: true,
-    },
     samplingRate: 100,
     ...overrides,
   };

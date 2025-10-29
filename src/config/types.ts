@@ -5,6 +5,10 @@ export interface RUMConfigOptions {
     metrics?: string;
     traces: string;
   };
+  endpoint: {
+    url: string;
+    addSuffix?: boolean;
+  };
   service?: {
     name: string;
     version?: string;
@@ -37,10 +41,6 @@ export interface RUMConfigOptions {
     rageClickCount?: number;
     rageClickIntervalMs?: number;
     heavyLoadThresholdMs?: number;
-  };
-  customEndpoint?: {
-    url?: string;
-    addSuffix?: boolean;
   };
   logLevel?: string;
 }
