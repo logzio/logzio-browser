@@ -5,4 +5,4 @@
 ## 1.0.0
 
 - Initial release
-- Library for collecting Real user monitoring from brwoser applications and sending to Logzio
+- Library for collecting Real user monitoring from browser applications and sending to Logzio

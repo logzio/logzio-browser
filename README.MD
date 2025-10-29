@@ -33,7 +33,7 @@ LogzioRUM.init({
   tokens: {
     traces: <<LOGZIO_TRACES_TOKEN>>,
     logs: <<LOGZIO_LOGS_TOKEN>>,       // Required unless enable.errorTracking, enable.consoleLogs and enable.viewEvents are set to false
-    metrics: <<LOGZIO_METRICS_TOKEN>>, // Required unless enable.performanceMonitoring and enable.frustrationDetection are set to false
+    metrics: <<LOGZIO_METRICS_TOKEN>>, // Required unless enable.webVitals and enable.frustrationDetection are set to false
   },
   service: {
     name: <<SERVICE_NAME>>,        // Optional
@@ -70,6 +70,10 @@ LogzioRUM.init({
 | enable.webVitals                           | Enable performance monitoring. If turned off, no metrics will be sent.                                                                        | Optional          | `true`                      |
 | enable.viewEvents                          | Enable view end log event which contains the duration to indicate the current session state.                                                  | Optional          | `false`                     |
 | enable.consoleLogs                         | Enable console logs tracking. If turned off, no console logs will be sent.                                                                    | Optional          | `false`                     |
+| environmentData.collectOS                  | Enable collection of user operating system name, version and type information.                                                                | Optional          | `true`                      |
+| environmentData.collectBrowser             | Enable collection of user browser name, version and engine                                                                                    | Optional          | `true`                      |
+| environmentData.collectDevice              | Enable collection of user device type and screen dimensions                                                                                   | Optional          | `true`                      |
+| environmentData.collectLanguage            | Enable collection of user language and timezone                                                                                               | Optional          | `true`                      |
 | customAttributes                           | Extra fields containing data to be sent with each event. (such as user context)                                                               | Optional          | `{}`                        |
 | propagateTraceHeaderCorsUrls               | A list of Backend URLs to propagate the trace header to.                                                                                      | Optional          | `[]`                        |
 | samplingRate                               | The rate in which spans are sampled.                                                                                                          | Optional          | `100`(%)                    |
