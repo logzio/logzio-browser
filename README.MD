@@ -35,7 +35,7 @@ LogzioRUM.init({
     logs: <<LOGZIO_LOGS_TOKEN>>,       // Required unless enable.errorTracking, enable.consoleLogs and enable.viewEvents are set to false
     metrics: <<LOGZIO_METRICS_TOKEN>>, // Required unless enable.webVitals and enable.frustrationDetection are set to false
   },
-  endpoint {
+  endpoint: {
     url: "<<LOGZIO_RUM_URL>>",
   }
   service: {
