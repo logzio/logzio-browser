@@ -1,0 +1,100 @@
+{
+  "name": "@logzio/browser",
+  "version": "1.0.0",
+  "description": "Library for collecting Real User Monitoring (RUM) in JavaScript and forwarding to Logz.io.",
+  "keywords": [
+    "rum",
+    "real user monitoring",
+    "logzio",
+    "opentelemetry",
+    "browser",
+    "metrics",
+    "traces",
+    "logs"
+  ],
+  "homepage": "https://github.com/logzio/logzio-browser#readme",
+  "bugs": {
+    "url": "https://github.com/logzio/logzio-browser/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/logzio/logzio-browser.git"
+  },
+  "license": "Apache-2.0",
+  "author": "Logz.io",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "postinstall": "npm run build",
+    "test": "npm run test:unit && npm run test:integration && npm run test:browser",
+    "test:unit": "jest --config tests/unit/jest.config.cjs tests/unit/",
+    "test:integration": "NODE_OPTIONS=--unhandled-rejections=warn jest --config tests/integration/jest.config.cjs",
+    "test:browser": "playwright test --config tests/browser/playwright.config.ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "check-format": "prettier --check .",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/context-zone-peer-dep": "^2.0.1",
+    "@opentelemetry/exporter-logs-otlp-proto": "^0.203.0",
+    "@opentelemetry/exporter-metrics-otlp-proto": "^0.203.0",
+    "@opentelemetry/exporter-trace-otlp-proto": "^0.203.0",
+    "@opentelemetry/instrumentation-document-load": "^0.48.0",
+    "@opentelemetry/instrumentation-fetch": "^0.203.0",
+    "@opentelemetry/instrumentation-user-interaction": "^0.48.0",
+    "@opentelemetry/instrumentation-xml-http-request": "^0.203.0",
+    "@opentelemetry/instrumentation": "^0.203.0",
+    "@opentelemetry/resources": "^2.0.1",
+    "@opentelemetry/sdk-logs": "^0.203.0",
+    "@opentelemetry/sdk-metrics": "^2.0.1",
+    "@opentelemetry/sdk-trace-web": "^2.0.1",
+    "uuid": "^11.1.0",
+    "web-vitals": "^5.1.0",
+    "zone.js": "^0.15.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.34.0",
+    "@playwright/test": "^1.55.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.15",
+    "@typescript-eslint/eslint-plugin": "^8.41.0",
+    "@typescript-eslint/parser": "^8.41.0",
+    "eslint": "^9.31.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jest": "^29.0.1",
+    "eslint-plugin-prettier": "^5.5.4",
+    "globals": "^16.3.0",
+    "husky": "^9.1.6",
+    "jest": "^30.0.5",
+    "jest-environment-jsdom": "^30.1.1",
+    "lint-staged": "^16.1.5",
+    "playwright": "^1.55.0",
+    "prettier": "^3.6.2",
+    "ts-jest": "^29.4.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.38.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css,scss,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}

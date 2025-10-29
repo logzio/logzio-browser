@@ -1,0 +1,48 @@
+name: Tests
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint-and-format:
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+      - name: Install dependencies
+        run: npm ci
+      - name: Check formatting
+        run: npm run check-format
+      - name: Run ESLint
+        run: npm run lint
+
+  unit-and-integration-tests:
+    name: Unit, Integration, and Browser Tests
+    needs: lint-and-format
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+      - name: Start test server
+        run: node tests/browser/helpers/testServer.cjs &
+      - name: Run tests
+        run: npm test

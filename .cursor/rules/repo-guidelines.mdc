@@ -1,0 +1,187 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# Logz.io Real User Monitoring Repository Guidelines (Condensed)
+
+## 1) Engineering Philosophy
+
+- Invisible operation: do not impact host app behavior or performance
+- No-throw policy: never throw in runtime paths; log and continue
+- Graceful degradation: recover safely on failures (network/exporter)
+- Clean integration: prefer OTEL instrumentations over custom code
+- Privacy: do not collect PII; document collected fields
+
+## 2) Supported Environments
+
+- Browsers (broad support). Feature-detect APIs and guard for missing ones
+- Tests: Node.js + Jest (ts-jest) + Playwright for browser tests
+- TypeScript strict mode
+
+## 3) Project Structure (essential)
+
+```
+src/
+├─ openTelemetry/     # providers (logs/metrics/traces), processors, setup
+├─ instrumentation/   # instrumentations & trackers
+├─ context/           # session + view management
+├─ config/            # config types + defaults
+├─ shared/            # logger, constants, event listener
+├─ utils/             # env collection, helpers, store
+└─ aggregations/      # web vitals aggregator
+
+tests/
+├─ unit/              # unit tests for prod code
+├─ integration/       # JSDOM behavior-only integration
+└─ browser/           # Playwright full browser tests
+```
+
+## 4) Coding Conventions
+
+- Naming: variables camelCase; functions camelCase verbs; classes PascalCase; constants SCREAMING_SNAKE_CASE
+- Imports: ESM only; external before internal
+- TypeScript: strong typing, no `any`; use interfaces/guards; document complex types briefly
+- Structure: early returns; keep functions focused (<50 lines ideal); no empty catch blocks; comments explain "why"
+
+## 5) Error Handling & Logging
+
+- Runtime: do not throw; log via `RUMLogger`
+- Levels: error | warn | info (default) | debug
+- Log when: feature enable/disable; setup/validation errors; exporter failures; useful debug
+- Initialization: guard provider/exporter creation & registration; on critical init failure log error and cancel init (don’t start session/instrumentations)
+- Shutdown/forceFlush: must not throw
+
+## 6) OpenTelemetry Conventions
+
+- Providers: separate logs, metrics, traces; use OTLP exporters
+- Processors: enrich with session/view context; frustration metrics where enabled
+- Samplers: configurable sampling rate
+- Semantic attributes: use constants (e.g., `ATTR_SESSION_ID`, `ATTR_VIEW_ID`); prefix Logz.io attrs: `logzio.*`
+- Resources: include `service.name`, `service.version`, region/token, and environment data (browser/OS/device/language)
+
+## 7) Configuration (RUMConfig)
+
+- tokens: `{ traces, metrics, logs }`
+- enable: flags: `userActions`, `navigation`, `documentLoad`, `resourceLoad`, `consoleLogs`, `errorTracking`, `webVitals`, `viewEvents`, `frustrationDetection`
+- service: `{ name, version }`
+- region: Logz.io region
+- samplingRate: 0–100
+- environmentData: flags to collect OS, browser, device, language
+- frustrationThresholds: `{ rageClickCount, rageClickIntervalMs, heavyLoadThresholdMs }`
+- Defaults in `src/config/defaults.ts`
+- Validation:
+  - If metrics token missing and metrics-dependent features enabled → warn and auto-disable metrics-dependent features
+  - If logs token missing and logs-dependent features enabled → warn and auto-disable logs-dependent features
+
+## 8) Session & View Lifecycle (key rules)
+
+- Persisted keys: `logzio-rum-session-id` and `logzio-rum-last-activity` in localStorage
+- `start()` initializes session (existing or new), sets timers, starts view, updates last activity
+- `end()` ends view, flushes, clears timers; does NOT clear persisted session keys
+- `shutdown()` calls `end()`, removes listeners, and clears both persisted keys (fresh start next time)
+- beforeunload: `end()` only (do NOT clear session key; other tabs may still be active)
+- storage events: if session id removed → end; if session id changed → end + renew with new id
+- inactivity: timeout clears session id; max-duration triggers renewal
+
+## 9) Testing Strategy (3-tier)
+
+1) Unit (Jest + ts-jest)
+- Scope: production code (config, providers, processors, samplers, instrumentations, session/view)
+- Use centralized mocks in `tests/unit/__utils__/`
+- Behavior-first, no-throw verification, attribute/resource correctness
+- Coverage >= 80%
+
+2) Integration (JSDOM behavior-only)
+- Scope: `LogzioRUM.init()` flow, registration, console/navigation/interactions/errors
+- Avoid OTLP exporters; disable `webVitals`, `viewEvents`, `frustrationDetection` to keep JSDOM stable
+- Keep tests deterministic and warning-free
+
+3) Browser (Playwright)
+- Scope: real browser APIs (DOM events, History API, PerformanceObserver), frustration detection, network
+- Verify interactions/navigation/network/console/errors and metrics
+- Use test server and mock collector where needed; assert session/view attributes and telemetry shape
+
+### Mocking & Helpers (unit)
+- Prefer shared helpers in `tests/unit/__utils__/` (loggerMocks, utilsMocks, otelApiMocks, etc.)
+- Use factory `jest.mock` pattern, place before imports; prefer real constants; avoid inline ad‑hoc mocks
+
+### Quality Bar
+- Behavior-first tests; avoid implementation-detail assertions where possible
+- Consolidate scenarios with `it.each` when appropriate
+- Reset singletons/localStorage between tests; maintain deterministic conditions
+
+## 10) Performance Guidelines
+
+- Bundle: minimize deps; tree-shakeable patterns
+- Runtime: minimize sync work; use `requestIdleCallback` for non-critical work; batch exporter operations; clean up listeners/timers
+
+## 11) Release & CI (condensed)
+
+- SemVer; update `CHANGELOG.md`
+- Pre-publish: `npm run lint`, `npm run format`, `npm run test` (green, coverage met)
+- CI: enforce tests, lint, coverage, and basic bundle-size checks
+- Commits: descriptive with rationale; reference issues when relevant
+
+## 12) Documentation
+
+- README: install, usage, config, advanced usage, troubleshooting
+- Code: JSDoc for public APIs; brief comments for non-obvious logic
+
+## 13) Security & Compliance
+
+- Do not collect sensitive inputs; scrub where necessary
+- Respect privacy settings and feature-detect APIs
+- Never modify globals unexpectedly; guard and handle unsupported APIs
+
+## 14) Runtime Safety Checklist
+
+- [ ] Init guards around provider/exporter construction & registration
+- [ ] Auto-disable dependent features when tokens missing (with warnings)
+- [ ] Runtime log paths never throw; shutdown/forceFlush are safe
+- [ ] Listeners/timers cleaned up on `shutdown()`
+- [ ] Cross-tab storage events handled without throwing
+
+## 15) Developer Workflow
+
+- Branches: small, focused feature/bugfix
+- Reviews: correctness, performance, maintainability, no-throw compliance, tests
+- Keep PRs small; include rationale and tests
+
+## Appendix: Project Overview & Quick Start
+
+### Project Overview (short)
+- A browser RUM SDK built on OpenTelemetry to collect traces/logs/metrics from real users and export via OTLP to Logz.io. The SDK is designed to be invisible and safe, enriching telemetry with session/view context while respecting privacy.
+
+### Minimal Quick Start
+```ts
+import { LogzioRUM } from '@src';
+
+LogzioRUM.init({
+  region: 'us',
+  tokens: { traces: 'TRACES_TOKEN', logs: 'LOGS_TOKEN' },
+  service: { name: 'web-app', version: '1.0.0' },
+  enable: {
+    navigation: true,
+    documentLoad: true,
+    userActions: true,
+    consoleLogs: true,
+    errorTracking: true,
+    frustrationDetection: true,
+    webVitals: true,
+    viewEvents: true,
+    consoleLogs: true,
+  }
+});
+```
+
+### Core Attributes Cheat Sheet (common)
+- Session: `session.id`
+- View: `view.id`, `http.url`
+- Network: `http.method`, `http.status_code`
+- Interactions: `target.element`, `target.tagName`
+- Frustration (when enabled): `frustration.type`
+- Resource attributes (on all signals): `service.name`, `service.version`, `logzio.region`, `logzio.token`, environment data (browser/OS/device/language)
+
+---
+When in doubt, prioritize host app safety and telemetry quality. Keep it simple, predictable, and invisible.
