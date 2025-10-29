@@ -43,6 +43,6 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
       - name: Start test server
-        run: node tests/browser/helpers/testServer.js &
+        run: node tests/browser/helpers/testServer.cjs &
       - name: Run tests
         run: npm test
