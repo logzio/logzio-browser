@@ -49,6 +49,7 @@ export function createConfig(overrides: Partial<TestConfigOverrides> = {}) {
   return {
     tokens: {
       traces: 'trace-token',
+      metrics: 'metrics-token',
       ...overrides.tokens,
     },
     enable: {

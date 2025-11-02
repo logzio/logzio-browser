@@ -23,7 +23,6 @@ import {
   ATTR_FRUSTRATION_RAGE_CLICKS_COUNT,
   ATTR_FRUSTRATION_TYPE,
   ATTR_TARGET_ARIA_LABEL,
-  ATTR_REQUEST_PATH,
   FrustrationType,
   SpanName,
 } from './semconv';
@@ -217,13 +216,11 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
     const ariaLabel = actionableElement.ariaLabel;
 
     try {
-      const urlObj = new URL(url);
       const attributes: Record<string, any> = {
         [otelAttributeNames.EVENT_TYPE]: eventName,
         [otelAttributeNames.TARGET_ELEMENT]: actionableElement.tagName,
         [otelAttributeNames.TARGET_XPATH]: xpath,
         [otelAttributeNames.HTTP_URL]: url,
-        [ATTR_REQUEST_PATH]: urlObj.pathname,
       };
       if (ariaLabel) {
         attributes[ATTR_TARGET_ARIA_LABEL] = ariaLabel;
@@ -367,8 +364,6 @@ export class LogzioUserInteractionInstrumentation extends InstrumentationBase<Lo
 
       // Update the URL attribute to use the old URL (where the click happened)
       this.pendingClick.span.setAttribute('http.url', event.oldUrl);
-      const oldUrlObj = new URL(event.oldUrl);
-      this.pendingClick.span.setAttribute(ATTR_REQUEST_PATH, oldUrlObj.pathname);
 
       // Clear the pending click since we've processed it
       this.pendingClick = null;

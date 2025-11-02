@@ -44,22 +44,6 @@ export function getAuthorizationHeader(token: string): string {
 }
 
 /**
- * Converts all defined values in an object to strings.
- * Skips null and undefined values.
- * @param attrs - The attributes object to stringify.
- * @returns A new object with all defined values converted to strings.
- */
-export function stringifyDefined(attrs: Record<string, unknown>): Record<string, string> {
-  const result: Record<string, string> = {};
-
-  for (const [key, value] of Object.entries(attrs)) {
-    setIfDefined(result, key, value);
-  }
-
-  return result;
-}
-
-/**
  * Helper function to set an attribute only if the value is defined.
  * Converts values to strings for Prometheus compatibility.
  */

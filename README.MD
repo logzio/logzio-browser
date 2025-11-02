@@ -48,6 +48,9 @@ LogzioRUM.init({
     // user.mame: user.name,
     // user.id: user.id,
     // "user.role": user.role
+
+    //// recommended: add env field (prod, dev, staging...)
+    env: "prod"
   },
 });
 ```

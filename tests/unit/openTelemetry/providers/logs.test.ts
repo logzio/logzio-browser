@@ -55,9 +55,15 @@ jest.mock('@opentelemetry/sdk-logs', () => {
   };
 });
 
-// Mock SessionContextLogProcessor
+// Mock SessionContextLogProcessor and RequestPathLogProcessor
 const sessionProcessorInstances: any[] = [];
 jest.mock('@src/openTelemetry/processors', () => {
+  class MockRequestPathLogProcessor {
+    __type = 'RequestPathLogProcessor';
+    constructor() {
+      mockConstructCalls.push(['RequestPathLogProcessor']);
+    }
+  }
   class MockSessionContextLogProcessor {
     __type = 'SessionContextLogProcessor';
     constructor() {
@@ -65,7 +71,10 @@ jest.mock('@src/openTelemetry/processors', () => {
       mockConstructCalls.push(['SessionContextLogProcessor']);
     }
   }
-  return { SessionContextLogProcessor: MockSessionContextLogProcessor };
+  return {
+    RequestPathLogProcessor: MockRequestPathLogProcessor,
+    SessionContextLogProcessor: MockSessionContextLogProcessor,
+  };
 });
 
 // Mock OTLPLogExporter
@@ -108,7 +117,7 @@ describe('logs provider', () => {
     const options = loggerCall[1];
     expect(options.resource).toBe(resource);
     expect(Array.isArray(options.processors)).toBe(true);
-    expect(options.processors).toHaveLength(2);
+    expect(options.processors).toHaveLength(3);
   });
 
   it('should create processors in correct order', () => {
@@ -120,12 +129,16 @@ describe('logs provider', () => {
     const loggerCall = mockConstructCalls.find(([name]) => name === 'LoggerProvider');
     const processors = loggerCall[1].processors;
 
-    // First processor should be SessionContextLogProcessor
-    const sessionProcessor = processors[0];
+    // First processor should be RequestPathLogProcessor
+    const requestPathProcessor = processors[0];
+    expect(requestPathProcessor.__type).toBe('RequestPathLogProcessor');
+
+    // Second processor should be SessionContextLogProcessor
+    const sessionProcessor = processors[1];
     expect(sessionProcessor.__type).toBe('SessionContextLogProcessor');
 
-    // Second processor should be BatchLogRecordProcessor
-    const batchProcessor = processors[1];
+    // Third processor should be BatchLogRecordProcessor
+    const batchProcessor = processors[2];
     expect(batchProcessor.constructor.name).toBe('MockBatchLogRecordProcessor');
   });
 

@@ -8,7 +8,7 @@ import {
   ATTR_CODE_FILE_PATH,
 } from '@opentelemetry/semantic-conventions';
 import { DOM_EVENT, rumLogger } from '../shared';
-import { ATTR_REQUEST_PATH, SpanName } from './semconv';
+import { SpanName } from './semconv';
 import { ErrorTracker, ErrorEventData } from './trackers';
 
 enum ErrorCategory {
@@ -80,9 +80,7 @@ export class ErrorTrackingInstrumentation extends InstrumentationBase {
 
     const extraAttributes: Attributes = {};
     if (event.filename) {
-      const urlObj = new URL(window.location.href);
       extraAttributes[ATTR_URL_PATH] = window.location.href;
-      extraAttributes[ATTR_REQUEST_PATH] = urlObj.pathname;
       extraAttributes[ATTR_CODE_FILE_PATH] = event.filename;
     }
     if (event.line !== undefined) {

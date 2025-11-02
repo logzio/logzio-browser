@@ -45,7 +45,10 @@ describe('RUMView getters and timing', () => {
     jest.useRealTimers();
   });
 
-  const cfg = { enable: { webVitals: false, viewEvents: false } } as any;
+  const cfg = {
+    tokens: { metrics: 'test-metrics-token' },
+    enable: { webVitals: false, viewEvents: false },
+  } as any;
 
   it('should return generated id in getViewId', () => {
     const view = new RUMView('s', cfg);

@@ -13,10 +13,21 @@ import {
 } from 'web-vitals/attribution';
 import { metrics, type Histogram } from '@opentelemetry/api';
 import { MeterProvider } from '@opentelemetry/sdk-metrics';
+import { logs, Logger } from '@opentelemetry/api-logs';
 import { ATTR_URL_PATH } from '@opentelemetry/semantic-conventions';
+import { AttributeNames as otelAttributeNames } from '@opentelemetry/instrumentation-user-interaction';
 import { LOGZIO_RUM_PROVIDER_NAME, LOGZIO_RUM_METRICS_PREFIX, rumLogger } from '../shared';
 import { setIfDefined } from '../utils/helpers';
-import { ATTR_SESSION_ID, ATTR_VIEW_ID, ATTR_REQUEST_PATH } from '../instrumentation';
+import {
+  ATTR_SESSION_ID,
+  ATTR_VIEW_ID,
+  ATTR_REQUEST_PATH,
+  ATTR_WEB_VITAL_NAME,
+  ATTR_WEB_VITAL_VALUE,
+  ATTR_WEB_VITAL_RATING,
+  ATTR_WEB_VITAL_ID,
+  ATTR_WEB_VITAL_NAVIGATION_TYPE,
+} from '../instrumentation';
 
 /**
  * This class represents the web vitals aggregator.
@@ -26,6 +37,7 @@ export class WebVitalsAggregator {
   private collectedMetrics: Record<string, MetricWithAttribution> = {};
   private histograms: Record<string, Histogram> = {};
   private meter = metrics.getMeter(LOGZIO_RUM_PROVIDER_NAME);
+  private logsProvider: Logger = logs.getLogger(LOGZIO_RUM_PROVIDER_NAME);
 
   constructor(
     private readonly meterProvider: MeterProvider | null = null,
@@ -98,7 +110,9 @@ export class WebVitalsAggregator {
    */
   private recordMetric(metric: MetricWithAttribution): void {
     const urlObj = new URL(window.location.href);
-    const attributes: Record<string, any> = {
+
+    // Get all diagnostic attributes for the log
+    const diagnosticAttributes: Record<string, any> = {
       'metric.rating': metric.rating,
       [ATTR_URL_PATH]: window.location.href,
       [ATTR_REQUEST_PATH]: urlObj.pathname,
@@ -108,9 +122,51 @@ export class WebVitalsAggregator {
       ...this.getMetricAttributes(metric),
     };
 
+    // Emit diagnostic log with all attributes
+    this.emitDiagnosticLog(metric, diagnosticAttributes);
+
+    // Record metric with restricted attributes (path, browser, device, env, service, country)
+    const metricAttributes = this.getRestrictedMetricAttributes(urlObj.pathname);
     const unit = this.getMetricUnit(metric.name);
     const histogram = this.getOrCreateHistogram(metric.name, unit);
-    histogram.record(metric.value, attributes);
+    histogram.record(metric.value, metricAttributes);
+  }
+
+  /**
+   * Returns restricted attributes for metrics (path, browser, device, env, service, country).
+   * Service attributes come from the resource, so we only include path here.
+   * Browser, device, env, and service are already in the resource.
+   * Country will be enriched via client.ip on the backend/collector for geo-IP lookup.
+   * @param pathname - The request path.
+   * @returns The restricted metric attributes.
+   */
+  private getRestrictedMetricAttributes(pathname: string): Record<string, any> {
+    return {
+      [ATTR_REQUEST_PATH]: pathname,
+    };
+  }
+
+  /**
+   * Emits a diagnostic log with extended Web Vitals attributes.
+   * @param metric - The metric to log.
+   * @param attributes - The diagnostic attributes.
+   */
+  private emitDiagnosticLog(metric: MetricWithAttribution, attributes: Record<string, any>): void {
+    this.logsProvider.emit({
+      severityText: 'INFO',
+      attributes: {
+        [otelAttributeNames.EVENT_TYPE]: 'web_vital',
+        [ATTR_WEB_VITAL_NAME]: metric.name,
+        [ATTR_WEB_VITAL_VALUE]: metric.value,
+        [ATTR_WEB_VITAL_RATING]: metric.rating,
+        [ATTR_WEB_VITAL_ID]: metric.id,
+        [ATTR_WEB_VITAL_NAVIGATION_TYPE]: metric.navigationType || 'unknown',
+        [ATTR_SESSION_ID]: this.sessionId,
+        [ATTR_VIEW_ID]: this.viewId,
+        [ATTR_REQUEST_PATH]: attributes[ATTR_REQUEST_PATH],
+        ...attributes,
+      },
+    });
   }
 
   /**

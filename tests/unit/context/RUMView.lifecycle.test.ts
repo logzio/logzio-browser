@@ -62,6 +62,7 @@ describe('RUMView lifecycle and events', () => {
   });
 
   const createConfig = (overrides?: Partial<any>) => ({
+    tokens: { metrics: 'test-metrics-token' },
     enable: { webVitals: true, viewEvents: true },
     ...(overrides || {}),
   });

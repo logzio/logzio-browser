@@ -19,7 +19,6 @@ import {
 import { LogzioContextManager } from '../context/LogzioContextManager';
 import { EnvironmentCollector, EnvironmentAttributes } from '../utils';
 import { rumLogger, SessionManager } from '../shared';
-import { stringifyDefined } from '../utils/helpers';
 import { getMetricsProvider, getLogProvider, getTraceProvider } from './providers';
 
 const enum DataType {
@@ -207,24 +206,35 @@ export class OpenTelemetryProvider {
   private getResource(isMetrics = false): Resource {
     let resource: Resource = emptyResource();
 
-    if (this.config.service?.name)
+    if (this.config.service?.name) {
       resource = resource.merge(
         resourceFromAttributes({
           [ATTR_SERVICE_NAME]: this.config.service!.name,
         }),
       );
+    }
 
-    if (this.config.service?.version)
+    if (!isMetrics && this.config.service?.version) {
       resource = resource.merge(
         resourceFromAttributes({
           [ATTR_SERVICE_VERSION]: this.config.service!.version,
         }),
       );
+    }
 
     const environmentData = this.getEnvDataForResource(isMetrics);
 
     if (Object.keys(environmentData).length > 0) {
       resource = resource.merge(resourceFromAttributes(environmentData));
+    }
+
+    // For metrics, only add env from customAttributes if it exists
+    if (isMetrics && this.config.customAttributes?.['env']) {
+      resource = resource.merge(
+        resourceFromAttributes({
+          env: String(this.config.customAttributes['env']),
+        }),
+      );
     }
 
     return resource;
@@ -292,7 +302,8 @@ export class OpenTelemetryProvider {
 
   /**
    * Returns environment data for resource creation.
-   * For metrics, stringifies all values. For traces/logs, returns original types.
+   * For metrics: only browser.name and device.type (stringified)
+   * For traces/logs: all environment data with original types
    */
   private getEnvDataForResource(
     isMetrics = false,
@@ -300,6 +311,14 @@ export class OpenTelemetryProvider {
     if (!isMetrics) {
       return this.envData;
     }
-    return stringifyDefined(this.envData);
+
+    const metricsEnvData: Record<string, string> = {};
+    if (this.envData['browser.name']) {
+      metricsEnvData['browser.name'] = String(this.envData['browser.name']);
+    }
+    if (this.envData['device.type']) {
+      metricsEnvData['device.type'] = String(this.envData['device.type']);
+    }
+    return metricsEnvData;
   }
 }

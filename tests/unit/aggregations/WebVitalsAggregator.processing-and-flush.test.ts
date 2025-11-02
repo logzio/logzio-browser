@@ -25,7 +25,14 @@ jest.mock('web-vitals/attribution', () => ({
 
 // Mock instrumentation constants
 jest.mock('@src/instrumentation', () => ({
-  ATTR_URL: 'url.path',
+  ATTR_SESSION_ID: 'session.id',
+  ATTR_VIEW_ID: 'view.id',
+  ATTR_REQUEST_PATH: 'request.path',
+  ATTR_WEB_VITAL_NAME: 'web_vital.name',
+  ATTR_WEB_VITAL_VALUE: 'web_vital.value',
+  ATTR_WEB_VITAL_RATING: 'web_vital.rating',
+  ATTR_WEB_VITAL_ID: 'web_vital.id',
+  ATTR_WEB_VITAL_NAVIGATION_TYPE: 'web_vital.navigation_type',
 }));
 
 // Mock OTel API using centralized helper
@@ -70,7 +77,7 @@ describe('WebVitalsAggregator - processing and flush', () => {
     );
     expect(histogramRecordMock).toHaveBeenCalledWith(
       123,
-      expect.objectContaining({ 'url.path': expect.any(String), 'navigation.type': 'unknown' }),
+      expect.objectContaining({ 'request.path': expect.any(String) }),
     );
   });
 
@@ -85,18 +92,18 @@ describe('WebVitalsAggregator - processing and flush', () => {
     );
   });
 
-  it('should include URL and default navigation.type in attributes', () => {
+  it('should include request.path in attributes', () => {
     const agg = new WebVitalsAggregator(null, 'session-123', 'view-456');
     agg.start();
     lcpCb?.({ name: 'LCP', value: 2500, attribution: {} });
     agg.flushMetrics();
     expect(histogramRecordMock).toHaveBeenCalledWith(
       2500,
-      expect.objectContaining({ 'url.path': expect.any(String), 'navigation.type': 'unknown' }),
+      expect.objectContaining({ 'request.path': expect.any(String) }),
     );
   });
 
-  it('should include representative keys for each metric in attribution mapping', () => {
+  it('should record metrics with only request.path attribute', () => {
     const agg = new WebVitalsAggregator(null, 'session-123', 'view-456');
     agg.start();
 
@@ -196,50 +203,11 @@ describe('WebVitalsAggregator - processing and flush', () => {
     agg.flushMetrics();
 
     const calls = histogramRecordMock.mock.calls.map(([, attrs]) => attrs);
-    // Spot-check representative keys per metric (simplified structure)
-    expect(calls).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          'largest.shift.target': 'div',
-          'load.state': 'loaded',
-          'largest.shift.entry.had.recent.input': 'false',
-          'largest.shift.entry.sources.bucket': '1',
-          'largest.shift.source.node.tag.name': 'DIV',
-        }),
-        expect.objectContaining({
-          'time.to.first.byte': '1',
-          'first.byte.to.first.contentful.paint': '1',
-          'first.contentful.load.state': 'loaded',
-          'first.contentful.paint.entry.entry.type': 'paint',
-          'navigation.entry.type': 'navigate',
-          'navigation.entry.redirect.bucket': '0',
-        }),
-        expect.objectContaining({
-          'largest.contentful.paint.target': 'img',
-          'largest.contentful.paint.url': 'https://asset',
-          'largest.contentful.paint.navigation.entry.type': 'navigate',
-          'largest.contentful.paint.navigation.entry.redirect.bucket': '1',
-          'largest.contentful.paint.entry.element.tag.name': 'IMG',
-          'largest.contentful.paint.entry.size.bucket': 'medium',
-        }),
-        expect.objectContaining({
-          'waiting.duration': '1',
-          'connection.duration': '4',
-          'navigation.entry.type': 'navigate',
-          'navigation.entry.redirect.bucket': '2-3',
-        }),
-        expect.objectContaining({
-          'interaction.target': 'button',
-          'processing.duration': '2',
-          'processed.event.entries.count.bucket': '1',
-          'processed.event.entries.first.name': 'click',
-          'long.animation.frame.entries.count.bucket': '1',
-          'long.animation.frame.entries.first.scripts.bucket': '2-3',
-          'longest.script.invoker.type': 'user-callback',
-          'longest.script.subpart': 'script-execution',
-        }),
-      ]),
-    );
+    // All metrics should only have request.path attribute
+    expect(calls).toHaveLength(5);
+    calls.forEach((attrs) => {
+      expect(attrs).toEqual({ 'request.path': expect.any(String) });
+    });
   });
 
   it('should handle no metrics -> flush as a no-op besides cleanup', () => {

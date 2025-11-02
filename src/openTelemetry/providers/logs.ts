@@ -6,7 +6,7 @@ import {
   BatchLogRecordProcessor,
 } from '@opentelemetry/sdk-logs';
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-proto';
-import { SessionContextLogProcessor } from '../processors';
+import { SessionContextLogProcessor, RequestPathLogProcessor } from '../processors';
 import { RUMConfig } from '../../config';
 import { getAuthorizationHeader } from '../../utils/helpers';
 import {
@@ -30,6 +30,7 @@ export function getLogProvider(
 
 function getLogProcessors(endpoint: string, config: RUMConfig): LogRecordProcessor[] {
   return [
+    new RequestPathLogProcessor(),
     new SessionContextLogProcessor(),
     new BatchLogRecordProcessor(getLogExporter(endpoint, config), {
       maxExportBatchSize: MAX_BULK_SIZE,
