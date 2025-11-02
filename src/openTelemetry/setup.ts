@@ -214,7 +214,7 @@ export class OpenTelemetryProvider {
     if (this.config.service?.name) {
       resource = resource.merge(
         resourceFromAttributes({
-          [ATTR_SERVICE_NAME]: this.config.service!.name,
+          [ATTR_SERVICE_NAME]: this.config.service.name,
         }),
       );
     }
@@ -222,7 +222,7 @@ export class OpenTelemetryProvider {
     if (!isMetrics && this.config.service?.version) {
       resource = resource.merge(
         resourceFromAttributes({
-          [ATTR_SERVICE_VERSION]: this.config.service!.version,
+          [ATTR_SERVICE_VERSION]: this.config.service.version,
         }),
       );
     }
