@@ -34,7 +34,8 @@ describe('OpenTelemetryProvider Construction', () => {
       createProviderInstance(config);
 
       expect(mockGetTraceProvider).toHaveBeenCalledTimes(1);
-      expect(mockGetMetricsProvider).toHaveBeenCalledTimes(1);
+      // Metrics provider is called twice: once for DELTA, once for CUMULATIVE
+      expect(mockGetMetricsProvider).toHaveBeenCalledTimes(2);
       expect(mockGetLogProvider).not.toHaveBeenCalled();
     });
 
@@ -56,7 +57,8 @@ describe('OpenTelemetryProvider Construction', () => {
       createProviderInstance(config);
 
       expect(mockGetTraceProvider).toHaveBeenCalledTimes(1);
-      expect(mockGetMetricsProvider).toHaveBeenCalledTimes(1);
+      // Metrics provider is called twice: once for DELTA, once for CUMULATIVE
+      expect(mockGetMetricsProvider).toHaveBeenCalledTimes(2);
       expect(mockGetLogProvider).toHaveBeenCalledTimes(1);
     });
   });
@@ -77,6 +79,7 @@ describe('OpenTelemetryProvider Construction', () => {
         expect.anything(),
         'https://whatever/third/party/logzio/endpoint/metrics',
         config,
+        expect.anything(), // AggregationTemporality
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),

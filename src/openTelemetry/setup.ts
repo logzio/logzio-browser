@@ -19,7 +19,8 @@ import {
 import { LogzioContextManager } from '../context/LogzioContextManager';
 import { EnvironmentCollector, EnvironmentAttributes } from '../utils';
 import { rumLogger, SessionManager } from '../shared';
-import { getMetricsProvider, getLogProvider, getTraceProvider } from './providers';
+import { getLogProvider, getTraceProvider } from './providers';
+import { metricsProviderManager } from './MetricsProviderManager';
 
 const enum DataType {
   LOGS = 'logs',
@@ -43,7 +44,14 @@ export class OpenTelemetryProvider {
     this.envData = this.collectEnvDataSafe();
 
     this.traceProvider = this.getTraceProvider();
-    if (config.tokens.metrics) this.metricsProvider = this.getMetricsProvider();
+    if (config.tokens.metrics) {
+      metricsProviderManager.init(
+        this.getResource(true),
+        this.getEndpointUrl(DataType.METRICS),
+        this.config,
+      );
+      this.metricsProvider = metricsProviderManager.getDeltaProvider();
+    }
     if (config.tokens.logs) this.logProvider = this.getLogProvider();
   }
 
@@ -116,7 +124,7 @@ export class OpenTelemetryProvider {
         // Shutdown all providers
         const promises: Promise<unknown>[] = [];
         if (op.traceProvider) promises.push(op.traceProvider.shutdown());
-        if (op.metricsProvider) promises.push(op.metricsProvider.shutdown());
+        if (op.metricsProvider) promises.push(metricsProviderManager.shutdown());
         if (op.logProvider) promises.push(op.logProvider.shutdown());
 
         await Promise.all(promises);
@@ -158,7 +166,7 @@ export class OpenTelemetryProvider {
    */
   public forceFlush(): void {
     if (this.traceProvider) this.traceProvider.forceFlush();
-    if (this.metricsProvider) this.metricsProvider.forceFlush();
+    if (this.metricsProvider) metricsProviderManager.forceFlush();
     if (this.logProvider) this.logProvider.forceFlush();
   }
 
@@ -171,23 +179,20 @@ export class OpenTelemetryProvider {
   }
 
   /**
+   * Returns the metrics provider manager.
+   * Provides access to both DELTA and CUMULATIVE metric providers.
+   * @returns The metrics provider manager instance.
+   */
+  public getMetricsProviderManager() {
+    return metricsProviderManager;
+  }
+
+  /**
    * Returns a trace provider.
    * @returns The trace provider.
    */
   private getTraceProvider(): WebTracerProvider {
     return getTraceProvider(this.getResource(), this.getEndpointUrl(DataType.TRACES), this.config);
-  }
-
-  /**
-   * Returns a metrics provider.
-   * @returns The metrics provider.
-   */
-  private getMetricsProvider(): MeterProvider {
-    return getMetricsProvider(
-      this.getResource(true),
-      this.getEndpointUrl(DataType.METRICS),
-      this.config,
-    );
   }
 
   /**

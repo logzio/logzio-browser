@@ -1,6 +1,6 @@
 import { Logger, logs } from '@opentelemetry/api-logs';
 import { AttributeNames as otelAttributeNames } from '@opentelemetry/instrumentation-user-interaction';
-import { metrics, type Counter } from '@opentelemetry/api';
+import type { Counter } from '@opentelemetry/api';
 import type { RUMConfig } from '../config';
 import { generateId, LocalStorageStore } from '../utils';
 import {
@@ -95,11 +95,18 @@ export class RUMSessionManager {
   /**
    * Creates the session and view counters.
    * Called once per session initialization.
+   * Uses the CUMULATIVE meter provider for ongoing counters.
    */
   private createCounters(): void {
     if (this.config.tokens.metrics) {
       try {
-        const meter = metrics.getMeter(LOGZIO_RUM_PROVIDER_NAME);
+        const otelProvider = OpenTelemetryProvider.getInstance(this.config);
+        const meter = otelProvider.getMetricsProviderManager().getMeter(LOGZIO_RUM_PROVIDER_NAME);
+
+        if (!meter) {
+          rumLogger.warn('CUMULATIVE meter not available, skipping counter creation');
+          return;
+        }
 
         if (!this.sessionCounter) {
           this.sessionCounter = meter.createCounter(`${LOGZIO_RUM_METRICS_PREFIX}_sessions_count`, {

@@ -26,17 +26,19 @@ import {
  * @param resource - The resource for the metric provider.
  * @param endpoint - The endpoint to export the metrics to.
  * @param config - The configuration for the SDK, which includes the region and the metrics token.
+ * @param temporalityPreference - The aggregation temporality preference (DELTA or CUMULATIVE).
  * @returns Metric provider.
  */
 export function getMetricsProvider(
   resource: Resource,
   endpoint: string,
   config: RUMConfig,
+  temporalityPreference: AggregationTemporality,
 ): MeterProvider {
   return new MeterProvider({
     resource: resource,
     views: getMetricsViews(),
-    readers: getMetricsReaders(endpoint, config),
+    readers: getMetricsReaders(endpoint, config, temporalityPreference),
   });
 }
 
@@ -89,12 +91,17 @@ function getMetricsViews(): MetricView[] {
  * It configures the metric reader to export the metrics to the endpoint using OTLP metric exporter.
  * @param endpoint - The endpoint to export the metrics to.
  * @param config - The configuration for the SDK, which includes the region and the metrics token.
+ * @param temporalityPreference - The aggregation temporality preference (DELTA or CUMULATIVE).
  * @returns Metric reader.
  */
-function getMetricsReaders(endpoint: string, config: RUMConfig): MetricReader[] {
+function getMetricsReaders(
+  endpoint: string,
+  config: RUMConfig,
+  temporalityPreference: AggregationTemporality,
+): MetricReader[] {
   return [
     new PeriodicExportingMetricReader({
-      exporter: getMetricsExporter(endpoint, config),
+      exporter: getMetricsExporter(endpoint, config, temporalityPreference),
       exportIntervalMillis: MAX_METRIC_WAIT_MS,
     }),
   ];
@@ -102,13 +109,20 @@ function getMetricsReaders(endpoint: string, config: RUMConfig): MetricReader[] 
 
 /**
  * Returns OTLP metric exporter.
- * It configures the metric exporter to not re-export the same metric multiple times without it's value changing.
+ * It configures the metric exporter with the specified aggregation temporality preference.
+ * DELTA: exports only changes since last export (efficient for one-time metrics like web vitals).
+ * CUMULATIVE: exports total accumulated values (needed for ongoing counters like views/sessions).
  * ref: https://github.com/open-telemetry/opentelemetry-js/issues/3105
  * @param endpoint - The endpoint to export the metrics to.
  * @param config - The configuration for the SDK, which includes the region and the metrics token.
+ * @param temporalityPreference - The aggregation temporality preference (DELTA or CUMULATIVE).
  * @returns OTLP metric exporter.
  */
-function getMetricsExporter(endpoint: string, config: RUMConfig): PushMetricExporter {
+function getMetricsExporter(
+  endpoint: string,
+  config: RUMConfig,
+  temporalityPreference: AggregationTemporality,
+): PushMetricExporter {
   return new OTLPMetricExporter({
     url: endpoint,
     headers: {
@@ -116,6 +130,6 @@ function getMetricsExporter(endpoint: string, config: RUMConfig): PushMetricExpo
       [AUTHORIZATION_HEADER]: getAuthorizationHeader(config.tokens.metrics),
       [LOGZIO_DATA_TYPE_HEADER]: 'metrics',
     },
-    temporalityPreference: AggregationTemporality.DELTA,
+    temporalityPreference,
   });
 }
