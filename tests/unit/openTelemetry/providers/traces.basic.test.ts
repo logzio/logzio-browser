@@ -9,6 +9,12 @@ import {
 
 // Mock processors
 jest.mock('@src/openTelemetry/processors', () => ({
+  RequestPathSpanProcessor: class MockRequestPathSpanProcessor {
+    __type = 'RequestPathSpanProcessor';
+    constructor() {
+      mockConstructCalls.push(['RequestPathSpanProcessor']);
+    }
+  },
   SessionContextSpanProcessor: class MockSessionContextSpanProcessor {
     __type = 'SessionContextSpanProcessor';
     constructor() {
@@ -141,10 +147,11 @@ describe('Traces Provider - Basic Functionality', () => {
     const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
     const processors = tracerCall[1].spanProcessors;
 
-    // Should only have SessionContextSpanProcessor and BatchSpanProcessor
-    expect(processors).toHaveLength(2);
-    expect(processors[0].__type).toBe('SessionContextSpanProcessor');
-    expect(processors[1].constructor.name).toBe('MockBatchSpanProcessor');
+    // Should have RequestPathSpanProcessor, SessionContextSpanProcessor, and BatchSpanProcessor
+    expect(processors).toHaveLength(3);
+    expect(processors[0].__type).toBe('RequestPathSpanProcessor');
+    expect(processors[1].__type).toBe('SessionContextSpanProcessor');
+    expect(processors[2].constructor.name).toBe('MockBatchSpanProcessor');
   });
 
   it('should handle missing frustrationDetection property gracefully', () => {
@@ -157,10 +164,11 @@ describe('Traces Provider - Basic Functionality', () => {
     const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
     const processors = tracerCall[1].spanProcessors;
 
-    // Should only have SessionContextSpanProcessor and BatchSpanProcessor (no frustration detection)
-    expect(processors).toHaveLength(2);
-    expect(processors[0].__type).toBe('SessionContextSpanProcessor');
-    expect(processors[1].constructor.name).toBe('MockBatchSpanProcessor');
+    // Should have RequestPathSpanProcessor, SessionContextSpanProcessor, and BatchSpanProcessor (no frustration detection)
+    expect(processors).toHaveLength(3);
+    expect(processors[0].__type).toBe('RequestPathSpanProcessor');
+    expect(processors[1].__type).toBe('SessionContextSpanProcessor');
+    expect(processors[2].constructor.name).toBe('MockBatchSpanProcessor');
   });
 
   it('should integrate all components correctly', () => {
@@ -197,6 +205,6 @@ describe('Traces Provider - Basic Functionality', () => {
     expect(options.resource).toBe(resource);
     expect(options.sampler.__type).toBe('TraceIdRatioBasedSampler');
     expect(options.sampler.ratio).toBe(0.75);
-    expect(options.spanProcessors).toHaveLength(3);
+    expect(options.spanProcessors).toHaveLength(4);
   });
 });

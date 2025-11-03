@@ -73,6 +73,7 @@ describe('RUMSessionManager navigation and timeouts', () => {
   });
 
   const createConfig = (overrides?: any) => ({
+    tokens: { metrics: 'test-metrics-token' },
     enable: { navigation: true },
     session: { maxDurationMs: 2000, timeoutMs: 1500 },
     ...overrides,

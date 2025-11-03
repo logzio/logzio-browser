@@ -23,12 +23,16 @@ jest.mock('web-vitals/attribution', () => ({
   },
 }));
 
-// Mock OTel metrics API
+// Mock OTel API using centralized helper
+import { createOtelApiMock } from '../__utils__/otelApiMocks';
 const histogramRecordMock = jest.fn();
 const createHistogramMock = jest.fn(() => ({ record: histogramRecordMock }));
+const getMeterMock = jest.fn(() => ({ createHistogram: createHistogramMock }));
+
 jest.mock('@opentelemetry/api', () => ({
+  ...createOtelApiMock(),
   metrics: {
-    getMeter: jest.fn(() => ({ createHistogram: createHistogramMock })),
+    getMeter: () => getMeterMock(),
   },
 }));
 

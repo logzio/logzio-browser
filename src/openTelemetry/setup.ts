@@ -19,8 +19,8 @@ import {
 import { LogzioContextManager } from '../context/LogzioContextManager';
 import { EnvironmentCollector, EnvironmentAttributes } from '../utils';
 import { rumLogger, SessionManager } from '../shared';
-import { stringifyDefined } from '../utils/helpers';
-import { getMetricsProvider, getLogProvider, getTraceProvider } from './providers';
+import { getLogProvider, getTraceProvider } from './providers';
+import { metricsProviderManager } from './MetricsProviderManager';
 
 const enum DataType {
   LOGS = 'logs',
@@ -44,7 +44,14 @@ export class OpenTelemetryProvider {
     this.envData = this.collectEnvDataSafe();
 
     this.traceProvider = this.getTraceProvider();
-    if (config.tokens.metrics) this.metricsProvider = this.getMetricsProvider();
+    if (config.tokens.metrics) {
+      metricsProviderManager.init(
+        this.getResource(true),
+        this.getEndpointUrl(DataType.METRICS),
+        this.config,
+      );
+      this.metricsProvider = metricsProviderManager.getDeltaProvider();
+    }
     if (config.tokens.logs) this.logProvider = this.getLogProvider();
   }
 
@@ -117,7 +124,7 @@ export class OpenTelemetryProvider {
         // Shutdown all providers
         const promises: Promise<unknown>[] = [];
         if (op.traceProvider) promises.push(op.traceProvider.shutdown());
-        if (op.metricsProvider) promises.push(op.metricsProvider.shutdown());
+        if (op.metricsProvider) promises.push(metricsProviderManager.shutdown());
         if (op.logProvider) promises.push(op.logProvider.shutdown());
 
         await Promise.all(promises);
@@ -159,7 +166,7 @@ export class OpenTelemetryProvider {
    */
   public forceFlush(): void {
     if (this.traceProvider) this.traceProvider.forceFlush();
-    if (this.metricsProvider) this.metricsProvider.forceFlush();
+    if (this.metricsProvider) metricsProviderManager.forceFlush();
     if (this.logProvider) this.logProvider.forceFlush();
   }
 
@@ -172,23 +179,20 @@ export class OpenTelemetryProvider {
   }
 
   /**
+   * Returns the metrics provider manager.
+   * Provides access to both DELTA and CUMULATIVE metric providers.
+   * @returns The metrics provider manager instance.
+   */
+  public getMetricsProviderManager() {
+    return metricsProviderManager;
+  }
+
+  /**
    * Returns a trace provider.
    * @returns The trace provider.
    */
   private getTraceProvider(): WebTracerProvider {
     return getTraceProvider(this.getResource(), this.getEndpointUrl(DataType.TRACES), this.config);
-  }
-
-  /**
-   * Returns a metrics provider.
-   * @returns The metrics provider.
-   */
-  private getMetricsProvider(): MeterProvider {
-    return getMetricsProvider(
-      this.getResource(true),
-      this.getEndpointUrl(DataType.METRICS),
-      this.config,
-    );
   }
 
   /**
@@ -207,24 +211,35 @@ export class OpenTelemetryProvider {
   private getResource(isMetrics = false): Resource {
     let resource: Resource = emptyResource();
 
-    if (this.config.service?.name)
+    if (this.config.service?.name) {
       resource = resource.merge(
         resourceFromAttributes({
-          [ATTR_SERVICE_NAME]: this.config.service!.name,
+          [ATTR_SERVICE_NAME]: this.config.service.name,
         }),
       );
+    }
 
-    if (this.config.service?.version)
+    if (!isMetrics && this.config.service?.version) {
       resource = resource.merge(
         resourceFromAttributes({
-          [ATTR_SERVICE_VERSION]: this.config.service!.version,
+          [ATTR_SERVICE_VERSION]: this.config.service.version,
         }),
       );
+    }
 
     const environmentData = this.getEnvDataForResource(isMetrics);
 
     if (Object.keys(environmentData).length > 0) {
       resource = resource.merge(resourceFromAttributes(environmentData));
+    }
+
+    // For metrics, only add env from customAttributes if it exists
+    if (isMetrics && this.config.customAttributes?.['env']) {
+      resource = resource.merge(
+        resourceFromAttributes({
+          env: String(this.config.customAttributes['env']),
+        }),
+      );
     }
 
     return resource;
@@ -292,7 +307,8 @@ export class OpenTelemetryProvider {
 
   /**
    * Returns environment data for resource creation.
-   * For metrics, stringifies all values. For traces/logs, returns original types.
+   * For metrics: only browser.name and device.type (stringified)
+   * For traces/logs: all environment data with original types
    */
   private getEnvDataForResource(
     isMetrics = false,
@@ -300,6 +316,14 @@ export class OpenTelemetryProvider {
     if (!isMetrics) {
       return this.envData;
     }
-    return stringifyDefined(this.envData);
+
+    const metricsEnvData: Record<string, string> = {};
+    if (this.envData['browser.name']) {
+      metricsEnvData['browser.name'] = String(this.envData['browser.name']);
+    }
+    if (this.envData['device.type']) {
+      metricsEnvData['device.type'] = String(this.envData['device.type']);
+    }
+    return metricsEnvData;
   }
 }

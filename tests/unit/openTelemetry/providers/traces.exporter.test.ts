@@ -14,6 +14,12 @@ import {
 
 // Mock processors
 jest.mock('@src/openTelemetry/processors', () => ({
+  RequestPathSpanProcessor: class MockRequestPathSpanProcessor {
+    __type = 'RequestPathSpanProcessor';
+    constructor() {
+      mockConstructCalls.push(['RequestPathSpanProcessor']);
+    }
+  },
   SessionContextSpanProcessor: class MockSessionContextSpanProcessor {
     __type = 'SessionContextSpanProcessor';
     constructor() {

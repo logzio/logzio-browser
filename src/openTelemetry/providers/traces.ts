@@ -12,7 +12,11 @@ import {
 } from '@opentelemetry/sdk-trace-web';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
 import { RUMConfig } from '../../config';
-import { FrustrationDetectionProcessor, SessionContextSpanProcessor } from '../processors';
+import {
+  FrustrationDetectionProcessor,
+  SessionContextSpanProcessor,
+  RequestPathSpanProcessor,
+} from '../processors';
 import { getAuthorizationHeader } from '../../utils/helpers';
 import {
   MAX_SAMPLING_PERCENTAGE,
@@ -48,6 +52,7 @@ function getSampler(config: RUMConfig): Sampler {
 
 function getSpanProcessors(endpoint: string, config: RUMConfig): SpanProcessor[] {
   return [
+    new RequestPathSpanProcessor(),
     new SessionContextSpanProcessor(),
     ...(config.enable?.frustrationDetection ? [new FrustrationDetectionProcessor(config)] : []),
     new BatchSpanProcessor(getTraceExporter(endpoint, config), {

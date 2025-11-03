@@ -35,10 +35,12 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
         'https://whatever/third/party/logzio/endpoint/traces',
         config,
       );
+      // Metrics provider is called twice (DELTA and CUMULATIVE), check both calls have correct endpoint
       expect(mockGetMetricsProvider).toHaveBeenCalledWith(
         expect.anything(),
         'https://whatever/third/party/logzio/endpoint/metrics',
         config,
+        expect.anything(), // AggregationTemporality (DELTA or CUMULATIVE)
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),
@@ -69,6 +71,7 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
         expect.anything(),
         'https://custom.endpoint.com/metrics',
         config,
+        expect.anything(), // AggregationTemporality
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),
@@ -97,6 +100,7 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
         expect.anything(),
         'https://custom.endpoint.com/metrics',
         config,
+        expect.anything(), // AggregationTemporality
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),
@@ -127,6 +131,7 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
         expect.anything(),
         'https://custom.endpoint.com/api/v1',
         config,
+        expect.anything(), // AggregationTemporality
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),

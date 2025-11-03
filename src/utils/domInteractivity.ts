@@ -74,6 +74,13 @@ export function isClickableElement(element: HTMLElement): boolean {
     return true;
   }
 
+  // Explicitly exclude common React root containers to avoid false positives from event delegation
+  const isReactRoot =
+    element.id === 'root' || element.id === 'app' || tagName === 'body' || tagName === 'html';
+  if (isReactRoot) {
+    return false;
+  }
+
   // Elements with click handlers and pointer cursor (strong signal of intentional clickability)
   if (hasClickHandler(element) && hasPointerCursor(element) && element.tabIndex >= 0) {
     return true;

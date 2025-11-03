@@ -58,7 +58,8 @@ describe('OpenTelemetryProvider Resource Composition', () => {
       createProviderInstance(config);
 
       expect(mockGetTraceProvider).toHaveBeenCalledTimes(1);
-      expect(mockGetMetricsProvider).toHaveBeenCalledTimes(1);
+      // Metrics provider is called twice: once for DELTA, once for CUMULATIVE
+      expect(mockGetMetricsProvider).toHaveBeenCalledTimes(2);
       expect(mockGetLogProvider).toHaveBeenCalledTimes(1);
 
       const traceResource = (mockGetTraceProvider as jest.Mock).mock.calls[0][0];

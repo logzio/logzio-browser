@@ -12,6 +12,13 @@ export const ATTR_TARGET_ARIA_LABEL = 'target_aria_label';
 /* URL request path attributes */
 export const ATTR_REQUEST_PATH = 'request.path';
 
+/* Web Vitals attributes */
+export const ATTR_WEB_VITAL_NAME = 'web_vital.name';
+export const ATTR_WEB_VITAL_VALUE = 'web_vital.value';
+export const ATTR_WEB_VITAL_RATING = 'web_vital.rating';
+export const ATTR_WEB_VITAL_ID = 'web_vital.id';
+export const ATTR_WEB_VITAL_NAVIGATION_TYPE = 'web_vital.navigation_type';
+
 /* Frustration attributes */
 export const ATTR_FRUSTRATION_TYPE = 'frustration.type';
 export const ATTR_FRUSTRATION_DEAD_CLICK = 'frustration.dead_click';
@@ -45,9 +52,9 @@ export const ATTR_USER_TIMEZONE = 'user.timezone';
 
 /* Device types */
 export const enum DeviceType {
-  MOBILE = 'mobile',
-  TABLET = 'tablet',
-  DESKTOP = 'desktop',
+  MOBILE = 'Mobile',
+  TABLET = 'Tablet',
+  DESKTOP = 'Desktop',
 }
 
 /* Common span names */

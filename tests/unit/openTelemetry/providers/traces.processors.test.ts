@@ -12,6 +12,13 @@ import {
 const mockProcessorInstances: any[] = [];
 
 jest.mock('@src/openTelemetry/processors', () => ({
+  RequestPathSpanProcessor: class MockRequestPathSpanProcessor {
+    __type = 'RequestPathSpanProcessor';
+    constructor() {
+      mockConstructCalls.push(['RequestPathSpanProcessor']);
+      mockProcessorInstances.push(this);
+    }
+  },
   SessionContextSpanProcessor: class MockSessionContextSpanProcessor {
     __type = 'SessionContextSpanProcessor';
     constructor() {
@@ -106,9 +113,10 @@ describe('Traces Provider - Span Processors Configuration', () => {
     const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
     const processors = tracerCall[1].spanProcessors;
 
-    expect(processors).toHaveLength(2);
-    expect(processors[0].__type).toBe('SessionContextSpanProcessor');
-    expect(processors[1].constructor.name).toBe('MockBatchSpanProcessor');
+    expect(processors).toHaveLength(3);
+    expect(processors[0].__type).toBe('RequestPathSpanProcessor');
+    expect(processors[1].__type).toBe('SessionContextSpanProcessor');
+    expect(processors[2].constructor.name).toBe('MockBatchSpanProcessor');
 
     // Verify no FrustrationDetectionProcessor was created
     const frustrationCall = mockConstructCalls.find(
@@ -129,10 +137,11 @@ describe('Traces Provider - Span Processors Configuration', () => {
     const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
     const processors = tracerCall[1].spanProcessors;
 
-    expect(processors).toHaveLength(3);
-    expect(processors[0].__type).toBe('SessionContextSpanProcessor');
-    expect(processors[1].__type).toBe('FrustrationDetectionProcessor');
-    expect(processors[2].constructor.name).toBe('MockBatchSpanProcessor');
+    expect(processors).toHaveLength(4);
+    expect(processors[0].__type).toBe('RequestPathSpanProcessor');
+    expect(processors[1].__type).toBe('SessionContextSpanProcessor');
+    expect(processors[2].__type).toBe('FrustrationDetectionProcessor');
+    expect(processors[3].constructor.name).toBe('MockBatchSpanProcessor');
 
     // Verify FrustrationDetectionProcessor was created with config
     const frustrationCall = mockConstructCalls.find(
@@ -173,8 +182,8 @@ describe('Traces Provider - Span Processors Configuration', () => {
   });
 
   it.each([
-    { frustration: false, expectedCount: 2, description: 'without frustration detection' },
-    { frustration: true, expectedCount: 3, description: 'with frustration detection' },
+    { frustration: false, expectedCount: 3, description: 'without frustration detection' },
+    { frustration: true, expectedCount: 4, description: 'with frustration detection' },
   ])('should create $expectedCount processors $description', ({ frustration, expectedCount }) => {
     const resource = createMockResource({ serviceName: 'test-service' });
     const endpoint = 'https://traces.example.com';
@@ -189,15 +198,18 @@ describe('Traces Provider - Span Processors Configuration', () => {
 
     expect(processors).toHaveLength(expectedCount);
 
-    // SessionContextSpanProcessor should always be first
-    expect(processors[0].__type).toBe('SessionContextSpanProcessor');
+    // RequestPathSpanProcessor should always be first
+    expect(processors[0].__type).toBe('RequestPathSpanProcessor');
+
+    // SessionContextSpanProcessor should always be second
+    expect(processors[1].__type).toBe('SessionContextSpanProcessor');
 
     // BatchSpanProcessor should always be last
     expect(processors[expectedCount - 1].constructor.name).toBe('MockBatchSpanProcessor');
 
     if (frustration) {
-      // FrustrationDetectionProcessor should be in the middle
-      expect(processors[1].__type).toBe('FrustrationDetectionProcessor');
+      // FrustrationDetectionProcessor should be third (before BatchSpanProcessor)
+      expect(processors[2].__type).toBe('FrustrationDetectionProcessor');
     }
   });
 });

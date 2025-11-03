@@ -23,6 +23,7 @@ export class RUMSessionManager {
   private static readonly LOGZIO_SESSION_ID: string = 'logzio-rum-session-id';
   private static readonly LOGZIO_LAST_ACTIVITY: string = 'logzio-rum-last-activity';
   private static readonly LOGZIO_ACTIVE_TABS: string = 'logzio-rum-active-tabs';
+  private static readonly LOGZIO_SESSION_END_LOCK: string = 'logzio-rum-session-end-lock';
   private static readonly LAST_ACTIVITY_CHECK_INTERVAL: number = 10000; // 10 seconds
   private static readonly SESSION_END_EVENT_NAME = 'session_end';
 
@@ -33,6 +34,7 @@ export class RUMSessionManager {
   private eventListeners: EventListener[] = [];
   private inactivityInterval: ReturnType<typeof setInterval> | null = null;
   private logsProvider: Logger = logs.getLogger(LOGZIO_RUM_PROVIDER_NAME);
+  private hasEnded: boolean = false;
 
   constructor(private readonly config: RUMConfig) {}
 
@@ -54,10 +56,11 @@ export class RUMSessionManager {
    */
   private renewWithNewSessionId(): void {
     this.view?.end();
-    this.generateSessionEndEvent();
+    this.tryEmitSessionEndOnce();
     this.sessionId = this.generateNewSessionId();
     rumLogger.debug(`Starting a new session ${this.getSessionId()}.`);
     this.startTime = Date.now();
+    this.hasEnded = false;
     this.resetDurationTimer();
     this.startView();
   }
@@ -68,6 +71,7 @@ export class RUMSessionManager {
   public renew(): void {
     this.view?.end();
     this.init();
+    this.hasEnded = false;
     rumLogger.debug(`Renewing session ${this.getSessionId()}.`);
     this.startView();
   }
@@ -121,6 +125,47 @@ export class RUMSessionManager {
     const remainingTabs = this.getActiveTabsCount();
 
     if (remainingTabs === 0) {
+      this.tryEmitSessionEndOnce();
+      this.clearSessionId();
+    }
+  }
+
+  /**
+   * Tries to emit a session end event using a cross-tab lock to prevent duplicates.
+   * Only the first tab to acquire the lock will emit the event.
+   */
+  private tryEmitSessionEndOnce(): void {
+    if (!this.sessionId) return;
+
+    try {
+      const lockKey = RUMSessionManager.LOGZIO_SESSION_END_LOCK;
+      const emitterId = generateId();
+      const lockValue = `${this.sessionId}:${emitterId}`;
+
+      // Try to acquire the lock
+      const existingLock = LocalStorageStore.get(lockKey);
+
+      // If lock exists and is for the same session, another tab already emitted
+      if (existingLock && existingLock.startsWith(`${this.sessionId}:`)) {
+        rumLogger.debug(`Session end already emitted by another tab for session ${this.sessionId}`);
+        return;
+      }
+
+      // Set the lock
+      LocalStorageStore.set(lockKey, lockValue);
+
+      // Verify we won the race (best-effort lock)
+      const verifyLock = LocalStorageStore.get(lockKey);
+      if (verifyLock !== lockValue) {
+        rumLogger.debug(`Lost race to emit session end for session ${this.sessionId}`);
+        return;
+      }
+
+      // We won the lock, emit the event
+      this.generateSessionEndEvent();
+    } catch (error) {
+      rumLogger.warn('Failed to acquire session end lock:', error);
+      // On error, emit anyway to avoid losing the event
       this.generateSessionEndEvent();
     }
   }
@@ -149,7 +194,9 @@ export class RUMSessionManager {
    */
   public resume(): void {
     this.updateActivityTime();
-    if (!LocalStorageStore.get(RUMSessionManager.LOGZIO_SESSION_ID)) this.renew();
+    if (!LocalStorageStore.get(RUMSessionManager.LOGZIO_SESSION_ID) || this.hasEnded) {
+      this.renew();
+    }
   }
 
   /**
@@ -222,9 +269,12 @@ export class RUMSessionManager {
    * Times out the session.
    */
   private timeoutSession(): void {
-    this.generateSessionEndEvent();
+    this.tryEmitSessionEndOnce();
     this.end();
+    this.clearInactivityTimeoutInterval();
     this.clearSessionId();
+    this.sessionId = null;
+    this.hasEnded = true;
   }
 
   /**
@@ -311,8 +361,15 @@ export class RUMSessionManager {
 
   /**
    * Starts a new view when a navigation event occurs.
+   * If the session has ended or is invalid, renew it first.
    */
   private onNavigation(): void {
+    if (this.hasEnded || !this.sessionId) {
+      rumLogger.debug('Session invalid during navigation, renewing session');
+      this.renew();
+      return; // renew() calls startView()
+    }
+
     if (window.location.href !== this.view?.getUrl()) {
       this.view?.end();
       this.startView();
