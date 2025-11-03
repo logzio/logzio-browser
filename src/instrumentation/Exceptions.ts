@@ -14,7 +14,6 @@ import { ErrorTracker, ErrorEventData } from './trackers';
 enum ErrorCategory {
   UNHANDLED_EXCEPTION = 'runtime',
   UNHANDLED_REJECTION = 'promise',
-  MANUAL_ERROR = 'manual', // TODO: Add a public method to the LogzioRum SDK to allow manually reporting exceptions.
 }
 
 /**
