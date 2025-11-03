@@ -14,6 +14,7 @@ This package wraps [OpenTelemetry JavaScript for web](https://opentelemetry.io/)
   - [Configuration options](#configuration-options)
   - [Dynamic attributes inject](#dynamically-inject-attributes)
   - [Correlate with Backend Traces](#correlate-browser-traces-with-backend-traces)
+- [Collected Metrics](#collected-metrics)
 - [Changelog](./CHANGELOG.md)
 - [Contributing](./CONTRIBUTING.md)
 
@@ -125,6 +126,17 @@ LogzioRUM.init({
 The `traceparent` header is not CORS-safelisted, so you need to configure your backend to accept it and use it in your backend tracing implementation.
 
 <!-- prettier-ignore-end -->
+
+## Collected metrics
+
+| Metric                              | Metric name                    | Type            | Unit             | Description                                                                                                       |
+| ----------------------------------- | ------------------------------ | --------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **FCP** (First Contentful Paint)    | `logzio_rum_fcp`               | histogram       | ms               | Time to first visible paint                                                                                       |
+| **LCP** (Largest Contentful Paint)  | `logzio_rum_lcp`               | histogram       | ms               | Time until the largest visible element renders                                                                    |
+| **CLS** (Cumulative Layout Shift)   | `logzio_rum_cls`               | histogram       | score (unitless) | Visual stability across the session                                                                               |
+| **INP** (Interaction to Next Paint) | `logzio_rum_inp`               | histogram       | ms               | Response time to next paint after user interactions                                                               |
+| **TTFB** (Time to First Byte)       | `logzio_rum_ttfb`              | histogram       | ms               | Time from navigation start to first byte received                                                                 |
+| Frustration count                   | `logzio_rum_frustration_count` | counter (delta) | unitless         | Number of interactions classified as “frustration” (e.g., dead-click / rage-click / error-click) during the view. |
 
 ## Changelog
 
