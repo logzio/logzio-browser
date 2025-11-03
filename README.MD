@@ -38,7 +38,7 @@ LogzioRUM.init({
   },
   endpoint: {
     url: "<<LOGZIO_RUM_URL>>",
-  }
+  },
   service: {
     name: <<SERVICE_NAME>>,        // Optional
     version: <<SERVICE_VERSION>>,  // Optional
@@ -48,7 +48,7 @@ LogzioRUM.init({
     //// example:
     // user.name: user.name,
     // user.id: user.id,
-    // "user.role": user.role
+    // "user.role": user.role,
 
     //// recommended: add env field (prod, dev, staging...)
     env_id: "prod"
