@@ -1,6 +1,5 @@
 import { Logger, logs } from '@opentelemetry/api-logs';
 import { AttributeNames as otelAttributeNames } from '@opentelemetry/instrumentation-user-interaction';
-import type { Counter } from '@opentelemetry/api';
 import type { RUMConfig } from '../config';
 import { generateId, LocalStorageStore } from '../utils';
 import {
@@ -9,7 +8,6 @@ import {
   ACTIVITY_EVENTS,
   rumLogger,
   LOGZIO_RUM_PROVIDER_NAME,
-  LOGZIO_RUM_METRICS_PREFIX,
 } from '../shared';
 import { OpenTelemetryProvider } from '../openTelemetry/setup';
 import { NavigationEventType, NavigationTracker } from '../instrumentation/trackers';
@@ -37,8 +35,6 @@ export class RUMSessionManager {
   private inactivityInterval: ReturnType<typeof setInterval> | null = null;
   private logsProvider: Logger = logs.getLogger(LOGZIO_RUM_PROVIDER_NAME);
   private hasEnded: boolean = false;
-  private sessionCounter: Counter | null = null;
-  private viewCounter: Counter | null = null;
 
   constructor(private readonly config: RUMConfig) {}
 
@@ -85,46 +81,10 @@ export class RUMSessionManager {
    * If an existing session id is not found, a new one is generated and stored.
    */
   private init(): void {
-    this.createCounters();
     this.sessionId =
       LocalStorageStore.get(RUMSessionManager.LOGZIO_SESSION_ID) || this.generateNewSessionId();
     this.startTime = Date.now();
     this.resetDurationTimer();
-  }
-
-  /**
-   * Creates the session and view counters.
-   * Called once per session initialization.
-   * Uses the CUMULATIVE meter provider for ongoing counters.
-   */
-  private createCounters(): void {
-    if (this.config.tokens.metrics) {
-      try {
-        const otelProvider = OpenTelemetryProvider.getInstance(this.config);
-        const meter = otelProvider.getMetricsProviderManager().getMeter(LOGZIO_RUM_PROVIDER_NAME);
-
-        if (!meter) {
-          rumLogger.warn('CUMULATIVE meter not available, skipping counter creation');
-          return;
-        }
-
-        if (!this.sessionCounter) {
-          this.sessionCounter = meter.createCounter(`${LOGZIO_RUM_METRICS_PREFIX}_sessions_count`, {
-            description: 'Total number of sessions',
-            unit: 'session',
-          });
-        }
-
-        if (!this.viewCounter) {
-          this.viewCounter = meter.createCounter(`${LOGZIO_RUM_METRICS_PREFIX}_views_count`, {
-            description: 'Total number of views',
-            unit: 'view',
-          });
-        }
-      } catch (error) {
-        rumLogger.warn('Failed to create metric counters:', error);
-      }
-    }
   }
 
   /**
@@ -134,22 +94,7 @@ export class RUMSessionManager {
   private generateNewSessionId(): string {
     const newSessionId = generateId();
     LocalStorageStore.set(RUMSessionManager.LOGZIO_SESSION_ID, newSessionId);
-    this.recordSessionMetric();
     return newSessionId;
-  }
-
-  /**
-   * Records a session count metric.
-   * OTEL counter accumulates values internally - no need to track count in memory.
-   */
-  private recordSessionMetric(): void {
-    if (this.sessionCounter) {
-      try {
-        this.sessionCounter.add(1);
-      } catch (error) {
-        rumLogger.warn('Failed to record session metric:', error);
-      }
-    }
   }
 
   /**
@@ -158,18 +103,6 @@ export class RUMSessionManager {
   private startView(): void {
     this.view = new RUMView(this.sessionId!, this.config);
     this.view.start();
-    this.recordViewMetric();
-  }
-
-  /**
-   * Records a view count metric.
-   * Called each time a new view is created.
-   */
-  private recordViewMetric(): void {
-    rumLogger.debug('Recording view metric for active session.');
-    this.viewCounter?.add(1, {
-      [ATTR_SESSION_ID]: this.sessionId!,
-    });
   }
 
   /**
