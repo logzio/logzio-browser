@@ -5,7 +5,7 @@
 ## 1.1.0
 
 - **Breaking changes**
-  - Removed metrics from functunality
+  - Removed metrics from functionality
   - Web vitals are now only reported as logs
   - Frustration signal count metric is no longer generated
 
