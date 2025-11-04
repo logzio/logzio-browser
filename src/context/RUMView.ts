@@ -5,7 +5,6 @@ import { ATTR_SESSION_ID, ATTR_VIEW_ID, ATTR_REQUEST_PATH } from '../instrumenta
 import { WebVitalsAggregator } from '../aggregations/WebVitalsAggregator';
 import type { RUMConfig } from '../config';
 import { generateId } from '../utils';
-import { OpenTelemetryProvider } from '../openTelemetry/setup';
 import { LOGZIO_RUM_PROVIDER_NAME, rumLogger } from '../shared';
 import { rumContextManager } from './LogzioContextManager';
 
@@ -50,7 +49,7 @@ export class RUMView {
   public end(): void {
     if (this.isActive) {
       rumLogger.debug(`Ending view ${this.viewId}.`);
-      this.aggregator?.flushMetrics();
+      this.aggregator?.flushWebVitals();
       this.generateEndEvent();
       this.isActive = false;
     }
@@ -71,16 +70,11 @@ export class RUMView {
   }
 
   /**
-   * Starts the metric aggregation.
+   * Starts the web vitals aggregation.
    */
   private startMetricAggregation(): void {
     if (this.config.enable?.webVitals) {
-      const otelProvider = OpenTelemetryProvider.getInstance(this.config);
-      this.aggregator = new WebVitalsAggregator(
-        otelProvider.getMeterProvider(),
-        this.sessionId,
-        this.viewId,
-      );
+      this.aggregator = new WebVitalsAggregator(this.sessionId, this.viewId);
       this.aggregator.start();
     }
   }

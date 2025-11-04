@@ -3,11 +3,7 @@
  */
 import { createConfig } from '../../__utils__/configFactory';
 import { createProviderInstance, resetProviderSingleton } from '../../__utils__/providerHelpers';
-import {
-  mockGetTraceProvider,
-  mockGetMetricsProvider,
-  mockGetLogProvider,
-} from '../../__utils__/otelMocks';
+import { mockGetTraceProvider, mockGetLogProvider } from '../../__utils__/otelMocks';
 
 describe('OpenTelemetryProvider Construction', () => {
   beforeEach(() => {
@@ -23,19 +19,6 @@ describe('OpenTelemetryProvider Construction', () => {
       createProviderInstance(config);
 
       expect(mockGetTraceProvider).toHaveBeenCalledTimes(1);
-      expect(mockGetMetricsProvider).not.toHaveBeenCalled();
-      expect(mockGetLogProvider).not.toHaveBeenCalled();
-    });
-
-    it('should create trace and metrics providers when both tokens provided', () => {
-      const config = createConfig({
-        tokens: { traces: 'trace-token', metrics: 'metrics-token' },
-      });
-      createProviderInstance(config);
-
-      expect(mockGetTraceProvider).toHaveBeenCalledTimes(1);
-      // Metrics provider is called twice: once for DELTA, once for CUMULATIVE
-      expect(mockGetMetricsProvider).toHaveBeenCalledTimes(2);
       expect(mockGetLogProvider).not.toHaveBeenCalled();
     });
 
@@ -46,19 +29,6 @@ describe('OpenTelemetryProvider Construction', () => {
       createProviderInstance(config);
 
       expect(mockGetTraceProvider).toHaveBeenCalledTimes(1);
-      expect(mockGetMetricsProvider).not.toHaveBeenCalled();
-      expect(mockGetLogProvider).toHaveBeenCalledTimes(1);
-    });
-
-    it('should create all providers when all tokens provided', () => {
-      const config = createConfig({
-        tokens: { traces: 'trace-token', metrics: 'metrics-token', logs: 'logs-token' },
-      });
-      createProviderInstance(config);
-
-      expect(mockGetTraceProvider).toHaveBeenCalledTimes(1);
-      // Metrics provider is called twice: once for DELTA, once for CUMULATIVE
-      expect(mockGetMetricsProvider).toHaveBeenCalledTimes(2);
       expect(mockGetLogProvider).toHaveBeenCalledTimes(1);
     });
   });
@@ -66,7 +36,7 @@ describe('OpenTelemetryProvider Construction', () => {
   describe('endpoint handling', () => {
     it('should pass correct endpoints to provider functions', () => {
       const config = createConfig({
-        tokens: { traces: 'trace-token', metrics: 'metrics-token', logs: 'logs-token' },
+        tokens: { traces: 'trace-token', logs: 'logs-token' },
       });
       createProviderInstance(config);
 
@@ -74,12 +44,6 @@ describe('OpenTelemetryProvider Construction', () => {
         expect.anything(),
         'https://whatever/third/party/logzio/endpoint/traces',
         config,
-      );
-      expect(mockGetMetricsProvider).toHaveBeenCalledWith(
-        expect.anything(),
-        'https://whatever/third/party/logzio/endpoint/metrics',
-        config,
-        expect.anything(), // AggregationTemporality
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),

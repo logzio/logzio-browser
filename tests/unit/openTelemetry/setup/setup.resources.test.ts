@@ -12,7 +12,6 @@ import {
 } from '../../__utils__/resourceHelpers';
 import {
   mockGetTraceProvider,
-  mockGetMetricsProvider,
   mockGetLogProvider,
   mockEnvironmentCollect,
 } from '../../__utils__/otelMocks';
@@ -53,21 +52,17 @@ describe('OpenTelemetryProvider Resource Composition', () => {
     it('should include logzio region and correct token for each data type', () => {
       const config = createConfig({
         region: 'eu-west-1',
-        tokens: { traces: 'trace-123', metrics: 'metrics-456', logs: 'logs-789' },
+        tokens: { traces: 'trace-123', logs: 'logs-789' },
       });
       createProviderInstance(config);
 
       expect(mockGetTraceProvider).toHaveBeenCalledTimes(1);
-      // Metrics provider is called twice: once for DELTA, once for CUMULATIVE
-      expect(mockGetMetricsProvider).toHaveBeenCalledTimes(2);
       expect(mockGetLogProvider).toHaveBeenCalledTimes(1);
 
       const traceResource = (mockGetTraceProvider as jest.Mock).mock.calls[0][0];
-      const metricsResource = (mockGetMetricsProvider as jest.Mock).mock.calls[0][0];
       const logsResource = (mockGetLogProvider as jest.Mock).mock.calls[0][0];
 
       expectLogzioAttributes(traceResource);
-      expectLogzioAttributes(metricsResource);
       expectLogzioAttributes(logsResource);
     });
   });

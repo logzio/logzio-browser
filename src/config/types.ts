@@ -2,7 +2,6 @@ export interface RUMConfigOptions {
   region: string;
   tokens: {
     logs?: string;
-    metrics?: string;
     traces: string;
   };
   endpoint: {

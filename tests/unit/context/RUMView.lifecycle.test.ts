@@ -35,15 +35,13 @@ jest.mock('@src/context/LogzioContextManager', () => ({
 jest.mock('@src/aggregations/WebVitalsAggregator', () => ({
   WebVitalsAggregator: jest.fn().mockImplementation(() => ({
     start: jest.fn(),
-    flushMetrics: jest.fn(),
+    flushWebVitals: jest.fn(),
   })),
 }));
 
 jest.mock('@src/openTelemetry/setup', () => ({
   OpenTelemetryProvider: {
-    getInstance: jest.fn(() => ({
-      getMeterProvider: jest.fn(() => ({})),
-    })),
+    getInstance: jest.fn(() => ({})),
   },
 }));
 
@@ -83,7 +81,7 @@ describe('RUMView lifecycle and events', () => {
     const aggregatorInstance = (WebVitalsAggregator as jest.Mock).mock.results[0].value;
     expect(WebVitalsAggregator).toHaveBeenCalled();
     expect(aggregatorInstance.start).toHaveBeenCalled();
-    expect(aggregatorInstance.flushMetrics).toHaveBeenCalled();
+    expect(aggregatorInstance.flushWebVitals).toHaveBeenCalled();
   });
 
   it('should emit view_start and view_end events with expected attributes when viewEvents enabled', () => {

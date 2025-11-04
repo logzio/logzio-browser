@@ -18,7 +18,6 @@ jest.mock('@src/openTelemetry/setup', () => ({
   OpenTelemetryProvider: {
     getInstance: jest.fn(() => ({
       forceFlush: jest.fn(),
-      getMeterProvider: jest.fn(),
     })),
   },
 }));

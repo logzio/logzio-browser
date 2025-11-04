@@ -7,7 +7,6 @@ jest.mock('@src/shared', () => createSharedMock());
 
 const mockOtelInstance = {
   forceFlush: jest.fn(),
-  getMeterProvider: jest.fn(),
 };
 
 jest.mock('@src/openTelemetry/setup', () => ({

@@ -1,6 +1,6 @@
 {
   "name": "@logzio/browser",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Library for collecting Real User Monitoring (RUM) in JavaScript and forwarding to Logz.io.",
   "keywords": [
     "rum",
@@ -8,9 +8,10 @@
     "logzio",
     "opentelemetry",
     "browser",
-    "metrics",
     "traces",
-    "logs"
+    "logs",
+    "web vitals",
+    "performance monitoring"
   ],
   "homepage": "https://github.com/logzio/logzio-browser#readme",
   "bugs": {
@@ -25,12 +26,15 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "directories": {
-    "test": "tests"
-  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "postinstall": "npm run build",
+    "prepublishOnly": "npm run build",
     "test": "npm run test:unit && npm run test:integration && npm run test:browser",
     "test:unit": "jest --config tests/unit/jest.config.cjs tests/unit/",
     "test:integration": "NODE_OPTIONS=--unhandled-rejections=warn jest --config tests/integration/jest.config.cjs",
@@ -45,7 +49,6 @@
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/context-zone-peer-dep": "^2.0.1",
     "@opentelemetry/exporter-logs-otlp-proto": "^0.203.0",
-    "@opentelemetry/exporter-metrics-otlp-proto": "^0.203.0",
     "@opentelemetry/exporter-trace-otlp-proto": "^0.203.0",
     "@opentelemetry/instrumentation-document-load": "^0.48.0",
     "@opentelemetry/instrumentation-fetch": "^0.203.0",
@@ -54,7 +57,6 @@
     "@opentelemetry/instrumentation": "^0.203.0",
     "@opentelemetry/resources": "^2.0.1",
     "@opentelemetry/sdk-logs": "^0.203.0",
-    "@opentelemetry/sdk-metrics": "^2.0.1",
     "@opentelemetry/sdk-trace-web": "^2.0.1",
     "uuid": "^11.1.0",
     "web-vitals": "^5.1.0",

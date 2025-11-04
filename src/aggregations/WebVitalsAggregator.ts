@@ -11,12 +11,10 @@ import {
   onCLS,
   onINP,
 } from 'web-vitals/attribution';
-import { metrics, type Histogram } from '@opentelemetry/api';
-import { MeterProvider } from '@opentelemetry/sdk-metrics';
 import { logs, Logger } from '@opentelemetry/api-logs';
 import { ATTR_URL_PATH } from '@opentelemetry/semantic-conventions';
 import { AttributeNames as otelAttributeNames } from '@opentelemetry/instrumentation-user-interaction';
-import { LOGZIO_RUM_PROVIDER_NAME, LOGZIO_RUM_METRICS_PREFIX, rumLogger } from '../shared';
+import { LOGZIO_RUM_PROVIDER_NAME, rumLogger } from '../shared';
 import { setIfDefined } from '../utils/helpers';
 import {
   ATTR_SESSION_ID,
@@ -31,16 +29,13 @@ import {
 
 /**
  * This class represents the web vitals aggregator.
- * It collects and aggregates web vitals metrics.
+ * It collects and emits web vitals as logs.
  */
 export class WebVitalsAggregator {
   private collectedMetrics: Record<string, MetricWithAttribution> = {};
-  private histograms: Record<string, Histogram> = {};
-  private meter = metrics.getMeter(LOGZIO_RUM_PROVIDER_NAME);
   private logsProvider: Logger = logs.getLogger(LOGZIO_RUM_PROVIDER_NAME);
 
   constructor(
-    private readonly meterProvider: MeterProvider | null = null,
     private readonly sessionId: string,
     private readonly viewId: string,
   ) {}
@@ -73,46 +68,31 @@ export class WebVitalsAggregator {
   }
 
   /**
-   * Returns the metric unit based on the metric name.
-   * @param metricName - The name of the metric.
-   * @returns The unit of the metric.
+   * Flushes the collected metrics as logs.
    */
-  private getMetricUnit(metricName: string): string {
-    switch (metricName) {
-      case 'CLS':
-        return 'unitless';
-      default:
-        return 'ms';
-    }
-  }
-
-  /**
-   * Flushes the collected metrics.
-   */
-  public flushMetrics(): void {
+  public flushWebVitals(): void {
     if (Object.keys(this.collectedMetrics).length === 0) {
       this.cleanup();
       return;
     }
 
-    rumLogger.debug(`collected ${Object.keys(this.collectedMetrics).length} metrics`);
+    rumLogger.debug(`collected ${Object.keys(this.collectedMetrics).length} web vitals`);
     Object.values(this.collectedMetrics).forEach((metric) => {
-      rumLogger.debug(`recording metric ${metric.name}`);
-      this.recordMetric(metric);
+      rumLogger.debug(`emitting web vital log ${metric.name}`);
+      this.recordWebVital(metric);
     });
-    this.flushProvider();
     this.cleanup();
   }
 
   /**
-   * Records the metric.
+   * Records the metric as a log.
    * @param metric - The metric to record.
    */
-  private recordMetric(metric: MetricWithAttribution): void {
+  private recordWebVital(metric: MetricWithAttribution): void {
     const urlObj = new URL(window.location.href);
 
-    // Get all diagnostic attributes for the log
-    const diagnosticAttributes: Record<string, any> = {
+    // Get all attributes for the log
+    const logAttributes: Record<string, any> = {
       'metric.rating': metric.rating,
       [ATTR_URL_PATH]: window.location.href,
       [ATTR_REQUEST_PATH]: urlObj.pathname,
@@ -122,36 +102,16 @@ export class WebVitalsAggregator {
       ...this.getMetricAttributes(metric),
     };
 
-    // Emit diagnostic log with all attributes
-    this.emitDiagnosticLog(metric, diagnosticAttributes);
-
-    // Record metric with restricted attributes (path, browser, device, env, service, country)
-    const metricAttributes = this.getRestrictedMetricAttributes(urlObj.pathname);
-    const unit = this.getMetricUnit(metric.name);
-    const histogram = this.getOrCreateHistogram(metric.name, unit);
-    histogram.record(metric.value, metricAttributes);
+    // Emit log with all attributes
+    this.emitWebVitalLog(metric, logAttributes);
   }
 
   /**
-   * Returns restricted attributes for metrics (path, browser, device, env, service, country).
-   * Service attributes come from the resource, so we only include path here.
-   * Browser, device, env, and service are already in the resource.
-   * Country will be enriched via client.ip on the backend/collector for geo-IP lookup.
-   * @param pathname - The request path.
-   * @returns The restricted metric attributes.
-   */
-  private getRestrictedMetricAttributes(pathname: string): Record<string, any> {
-    return {
-      [ATTR_REQUEST_PATH]: pathname,
-    };
-  }
-
-  /**
-   * Emits a diagnostic log with extended Web Vitals attributes.
+   * Emits a log with Web Vitals attributes.
    * @param metric - The metric to log.
-   * @param attributes - The diagnostic attributes.
+   * @param attributes - The log attributes.
    */
-  private emitDiagnosticLog(metric: MetricWithAttribution, attributes: Record<string, any>): void {
+  private emitWebVitalLog(metric: MetricWithAttribution, attributes: Record<string, any>): void {
     this.logsProvider.emit({
       severityText: 'INFO',
       attributes: {
@@ -167,25 +127,6 @@ export class WebVitalsAggregator {
         ...attributes,
       },
     });
-  }
-
-  /**
-   * Gets or creates a cached histogram for the given metric name.
-   * @param metricName - The name of the metric.
-   * @param unit - The unit of the metric.
-   * @returns The cached or newly created histogram.
-   */
-  private getOrCreateHistogram(metricName: string, unit: string): Histogram {
-    const name = `${LOGZIO_RUM_METRICS_PREFIX}_${metricName.toLowerCase()}`;
-    let histogram = this.histograms[name];
-    if (!histogram) {
-      histogram = this.meter.createHistogram(name, {
-        description: `${metricName} web vital metric for a view.`,
-        unit,
-      });
-      this.histograms[name] = histogram;
-    }
-    return histogram;
   }
 
   /**
@@ -371,7 +312,6 @@ export class WebVitalsAggregator {
    */
   public stop(): void {
     this.cleanup();
-    this.histograms = {};
   }
 
   /**
@@ -386,15 +326,6 @@ export class WebVitalsAggregator {
    */
   private clearCollectedMetrics(): void {
     this.collectedMetrics = {};
-  }
-
-  /**
-   * Flushes the metrics provider.
-   */
-  private flushProvider(): void {
-    if (this.meterProvider) {
-      this.meterProvider.forceFlush();
-    }
   }
 
   /**
