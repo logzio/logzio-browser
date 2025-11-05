@@ -1,11 +1,7 @@
 import { RUMConfig } from '../../../../src/config';
 import { createConfig } from '../../__utils__/configFactory';
 import { createProviderInstance, resetProviderSingleton } from '../../__utils__/providerHelpers';
-import {
-  mockGetTraceProvider,
-  mockGetMetricsProvider,
-  mockGetLogProvider,
-} from '../../__utils__/otelMocks';
+import { mockGetTraceProvider, mockGetLogProvider } from '../../__utils__/otelMocks';
 
 // Mock shared dependencies using centralized helper
 jest.mock('@src/shared', () => {
@@ -23,7 +19,7 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
     it('should use default endpoint with suffix when endpoint is provided', () => {
       const config = new RUMConfig(
         createConfig({
-          tokens: { traces: 'trace-token', metrics: 'metrics-token', logs: 'logs-token' },
+          tokens: { traces: 'trace-token', logs: 'logs-token' },
         }) as any,
       );
 
@@ -34,13 +30,6 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
         expect.anything(),
         'https://whatever/third/party/logzio/endpoint/traces',
         config,
-      );
-      // Metrics provider is called twice (DELTA and CUMULATIVE), check both calls have correct endpoint
-      expect(mockGetMetricsProvider).toHaveBeenCalledWith(
-        expect.anything(),
-        'https://whatever/third/party/logzio/endpoint/metrics',
-        config,
-        expect.anything(), // AggregationTemporality (DELTA or CUMULATIVE)
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),
@@ -54,7 +43,7 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
     it('should use custom endpoint with suffix when addSuffix is true', () => {
       const config = new RUMConfig(
         createConfig({
-          tokens: { traces: 'trace-token', metrics: 'metrics-token', logs: 'logs-token' },
+          tokens: { traces: 'trace-token', logs: 'logs-token' },
           endpoint: { url: 'https://custom.endpoint.com', addSuffix: true },
         }) as any,
       );
@@ -67,12 +56,6 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
         'https://custom.endpoint.com/traces',
         config,
       );
-      expect(mockGetMetricsProvider).toHaveBeenCalledWith(
-        expect.anything(),
-        'https://custom.endpoint.com/metrics',
-        config,
-        expect.anything(), // AggregationTemporality
-      );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),
         'https://custom.endpoint.com/logs',
@@ -83,7 +66,7 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
     it('should handle trailing slash in custom endpoint', () => {
       const config = new RUMConfig(
         createConfig({
-          tokens: { traces: 'trace-token', metrics: 'metrics-token', logs: 'logs-token' },
+          tokens: { traces: 'trace-token', logs: 'logs-token' },
           endpoint: { url: 'https://custom.endpoint.com/', addSuffix: true },
         }) as any,
       );
@@ -95,12 +78,6 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
         expect.anything(),
         'https://custom.endpoint.com/traces',
         config,
-      );
-      expect(mockGetMetricsProvider).toHaveBeenCalledWith(
-        expect.anything(),
-        'https://custom.endpoint.com/metrics',
-        config,
-        expect.anything(), // AggregationTemporality
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),
@@ -114,7 +91,7 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
     it('should use custom endpoint as-is when addSuffix is false', () => {
       const config = new RUMConfig(
         createConfig({
-          tokens: { traces: 'trace-token', metrics: 'metrics-token', logs: 'logs-token' },
+          tokens: { traces: 'trace-token', logs: 'logs-token' },
           endpoint: { url: 'https://custom.endpoint.com/api/v1', addSuffix: false },
         }) as any,
       );
@@ -126,12 +103,6 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
         expect.anything(),
         'https://custom.endpoint.com/api/v1',
         config,
-      );
-      expect(mockGetMetricsProvider).toHaveBeenCalledWith(
-        expect.anything(),
-        'https://custom.endpoint.com/api/v1',
-        config,
-        expect.anything(), // AggregationTemporality
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),
@@ -146,7 +117,7 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
       expect(() => {
         new RUMConfig(
           createConfig({
-            tokens: { traces: 'trace-token', metrics: 'metrics-token', logs: 'logs-token' },
+            tokens: { traces: 'trace-token', logs: 'logs-token' },
             endpoint: { url: 'invalid-url', addSuffix: true },
           }) as any,
         );
@@ -157,7 +128,7 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
       expect(() => {
         new RUMConfig(
           createConfig({
-            tokens: { traces: 'trace-token', metrics: 'metrics-token', logs: 'logs-token' },
+            tokens: { traces: 'trace-token', logs: 'logs-token' },
             endpoint: { url: '', addSuffix: false },
           }) as any,
         );

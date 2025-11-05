@@ -77,11 +77,6 @@ export const DEVICE_BREAKPOINTS = {
 export const LOGZIO_RUM_PROVIDER_NAME = 'logzio-rum';
 
 /**
- * This constant represents the prefix for all RUM metrics.
- */
-export const LOGZIO_RUM_METRICS_PREFIX = 'logzio_rum';
-
-/**
  * MutationObserver configuration constants
  */
 export const MUTATION_IGNORED_TAGS = ['script', 'style', 'meta', 'link', 'title'] as const;

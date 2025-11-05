@@ -25,7 +25,6 @@ describe('RUMConfig', () => {
       tokens: {
         traces: 'trace-token',
         logs: 'logs-token',
-        metrics: 'metrics-token',
       },
       endpoint: {
         url: 'https://example.com',
@@ -34,7 +33,6 @@ describe('RUMConfig', () => {
     const config = new RUMConfig(confOptions);
     expect(config.region).toBe(confOptions.region);
     expect(config.tokens.logs).toBe(confOptions.tokens.logs);
-    expect(config.tokens.metrics).toBe(confOptions.tokens.metrics);
     expect(config.tokens.traces).toBe(confOptions.tokens.traces);
     expect(config.service!.name).toBe(DEFAULT_SERVICE_NAME);
     expect(config.service!.version).toBe(DEFAULT_SERVICE_VERSION);
@@ -55,7 +53,7 @@ describe('RUMConfig', () => {
   it('should override default values with provided config', () => {
     const customConfig = {
       region: 'us',
-      tokens: { logs: 'log-token', metrics: 'metric-token', traces: 'trace-token' },
+      tokens: { logs: 'log-token', traces: 'trace-token' },
       endpoint: { url: 'https://custom.endpoint.com' },
       service: { name: 'test', version: '1.2.3' },
       session: { maxDurationMs: 7200, timeoutMs: 600_000 },
@@ -73,7 +71,6 @@ describe('RUMConfig', () => {
 
     expect(config.region).toBe(customConfig.region);
     expect(config.tokens.logs).toBe(customConfig.tokens.logs);
-    expect(config.tokens.metrics).toBe(customConfig.tokens.metrics);
     expect(config.tokens.traces).toBe(customConfig.tokens.traces);
     expect(config.service!.name).toBe(customConfig.service.name);
     expect(config.service!.version).toBe(customConfig.service.version);
@@ -92,17 +89,33 @@ describe('RUMConfig', () => {
     );
   });
 
-  it('should not require logs and metrics tokens if relevant features are disabled', () => {
+  it('should not require logs token if relevant features are disabled', () => {
     const config = new RUMConfig({
       region: 'us',
       tokens: { traces: 'trace-token' },
       endpoint: { url: 'https://example.com' },
-      enable: { errorTracking: false, webVitals: false },
+      enable: { errorTracking: false, webVitals: false, viewEvents: false, consoleLogs: false },
     });
     expect(config.tokens.logs).toBe('');
-    expect(config.tokens.metrics).toBe('');
     expect(config.enable!.errorTracking).toBe(false);
     expect(config.enable!.webVitals).toBe(false);
+  });
+
+  it('should allow frustration detection without logs token', () => {
+    const config = new RUMConfig({
+      region: 'us',
+      tokens: { traces: 'trace-token' },
+      endpoint: { url: 'https://example.com' },
+      enable: {
+        errorTracking: false,
+        webVitals: false,
+        viewEvents: false,
+        consoleLogs: false,
+        frustrationDetection: true,
+      },
+    });
+    expect(config.tokens.logs).toBe('');
+    expect(config.enable!.frustrationDetection).toBe(true);
   });
 
   it('should throw an error if required fields are missing', () => {
@@ -121,7 +134,7 @@ describe('RUMConfig', () => {
     ).toThrow('Endpoint URL is required in RUM configuration.');
   });
 
-  it('should warn and disable metrics token is missing and web vitals is enabled', () => {
+  it('should warn and disable logs token is missing and log-dependent features are enabled', () => {
     const { rumLogger } = require('@src/shared');
 
     const config = new RUMConfig({
@@ -131,26 +144,14 @@ describe('RUMConfig', () => {
     });
 
     expect(rumLogger.warn).toHaveBeenCalledWith(
-      'Metrics token is required in RUM configuration when web vitals or frustration detection is enabled. Metrics will not be sent.',
-    );
-    expect(config.enable!.webVitals).toBe(false);
-  });
-
-  it('should warn and disable logs token is missing and error tracking is enabled', () => {
-    const { rumLogger } = require('@src/shared');
-
-    const config = new RUMConfig({
-      region: 'eu',
-      tokens: { traces: 'trace-token' },
-      endpoint: { url: 'https://example.com' },
-    });
-
-    expect(rumLogger.warn).toHaveBeenCalledWith(
-      'Logs token is required in RUM configuration when error tracking or view events are enabled. Exceptions stacktraces and view end events will not be sent.',
+      'Logs token is required in RUM configuration when error tracking, view events, console logs, or web vitals are enabled. These features will not be sent.',
     );
     expect(config.enable!.errorTracking).toBe(false);
     expect(config.enable!.viewEvents).toBe(false);
     expect(config.enable!.consoleLogs).toBe(false);
+    expect(config.enable!.webVitals).toBe(false);
+    // Frustration detection should still be enabled since it only uses traces
+    expect(config.enable!.frustrationDetection).toBe(true);
   });
 
   it('should assign default values for out-of-range fields', () => {

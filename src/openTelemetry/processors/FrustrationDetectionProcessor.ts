@@ -1,54 +1,26 @@
 import { ReadableSpan, SpanProcessor, Span } from '@opentelemetry/sdk-trace-base';
-import { Context, HrTime, metrics } from '@opentelemetry/api';
+import { Context, HrTime } from '@opentelemetry/api';
 import { AttributeNames } from '@opentelemetry/instrumentation-document-load';
 import { RUMConfig } from '../../config';
-import { rumLogger, LOGZIO_RUM_PROVIDER_NAME, LOGZIO_RUM_METRICS_PREFIX } from '../../shared';
+import { rumLogger } from '../../shared';
 import {
   ATTR_FRUSTRATION_TYPE,
   ATTR_FRUSTRATION_DEAD_CLICK,
   ATTR_FRUSTRATION_ERROR_CLICK,
   ATTR_FRUSTRATION_HEAVY_LOAD,
   ATTR_FRUSTRATION_RAGE_CLICK,
-  ATTR_SESSION_ID,
-  ATTR_VIEW_ID,
   FrustrationType,
   SpanName,
 } from '../../instrumentation';
 
 export class FrustrationDetectionProcessor implements SpanProcessor {
-  private readonly FRUSTRATION_COUNT_METRIC_NAME: string = `${LOGZIO_RUM_METRICS_PREFIX}_frustration_count`;
   private readonly FRUSTRATION_LOAD_DURATION_MS_ATTRIBUTE_NAME: string =
     'frustration.load_duration_ms';
-  private readonly UNKNOWN_VALUE_FALLBACK: string = 'unknown';
 
   private readonly HEAVY_LOAD_THRESHOLD_MS: number;
-  private readonly metricsEnabled: boolean;
-  private frustrationCounter: any = null;
-  private metricsInitialized: boolean = false;
 
   constructor(config: RUMConfig) {
     this.HEAVY_LOAD_THRESHOLD_MS = config.frustrationThresholds!.heavyLoadThresholdMs;
-    this.metricsEnabled = config.tokens!.metrics !== '';
-  }
-
-  /**
-   * Initializes the frustration metrics lazily to make sure our meter is initialized.
-   */
-  private initializeMetrics(): void {
-    if (this.metricsInitialized) {
-      return;
-    }
-
-    try {
-      rumLogger.debug('Initializing frustration metrics provider');
-      const meter = metrics.getMeter(LOGZIO_RUM_PROVIDER_NAME);
-      this.frustrationCounter = meter.createCounter(this.FRUSTRATION_COUNT_METRIC_NAME, {
-        description: 'Count of user frustration signals detected',
-      });
-      this.metricsInitialized = true;
-    } catch (error) {
-      rumLogger.warn('Failed to initialize frustration metrics:', error);
-    }
   }
 
   forceFlush(): Promise<void> {
@@ -63,39 +35,6 @@ export class FrustrationDetectionProcessor implements SpanProcessor {
   }
 
   /**
-   * Gets an attribute from the span.
-   * @param span - The span to get the attribute from.
-   * @param attributeName - The name of the attribute to get.
-   * @param fallback - The fallback value to return if the attribute is not found.
-   * @returns The attribute value.
-   */
-  private getAttributeFromSpan(
-    span: ReadableSpan,
-    attributeName: string,
-    fallback: string,
-  ): string {
-    return (span.attributes[attributeName] as string) || fallback;
-  }
-
-  /**
-   * Gets the view ID from the span.
-   * @param span - The span to get the view ID from.
-   * @returns The view ID.
-   */
-  private getViewIdFromSpan(span: ReadableSpan): string {
-    return this.getAttributeFromSpan(span, ATTR_VIEW_ID, this.UNKNOWN_VALUE_FALLBACK);
-  }
-
-  /**
-   * Gets the session ID from the span.
-   * @param span - The span to get the session ID from.
-   * @returns The session ID.
-   */
-  private getSessionIdFromSpan(span: ReadableSpan): string {
-    return this.getAttributeFromSpan(span, ATTR_SESSION_ID, this.UNKNOWN_VALUE_FALLBACK);
-  }
-
-  /**
    * Processes user interaction spans to process frustration signals.
    * @param span - The span to process.
    */
@@ -105,18 +44,7 @@ export class FrustrationDetectionProcessor implements SpanProcessor {
 
     if (frustrationTypes) {
       this.normalizeFrustrationAttributes(span, frustrationTypes);
-
-      const viewId = this.getViewIdFromSpan(span);
-      const sessionId = this.getSessionIdFromSpan(span);
-
-      // Handle both single frustration type and array of frustration types
-      const types = Array.isArray(frustrationTypes) ? frustrationTypes : [frustrationTypes];
-
-      types.forEach((type: any) => {
-        if (type && typeof type === 'string') {
-          this.incrementFrustrationCounter(type as FrustrationType, viewId, sessionId);
-        }
-      });
+      rumLogger.debug(`Detected frustration on span: ${JSON.stringify(frustrationTypes)}`);
     }
   }
 
@@ -168,38 +96,10 @@ export class FrustrationDetectionProcessor implements SpanProcessor {
         this.convertOtelTimeToMs(span.endTime) - this.convertOtelTimeToMs(span.startTime);
 
       if (duration > this.HEAVY_LOAD_THRESHOLD_MS) {
-        const viewId = this.getViewIdFromSpan(span);
-        const sessionId = this.getSessionIdFromSpan(span);
-
         this.normalizeFrustrationAttributes(span, FrustrationType.HEAVY_LOAD);
         span.attributes[this.FRUSTRATION_LOAD_DURATION_MS_ATTRIBUTE_NAME] = duration;
-
-        this.incrementFrustrationCounter(FrustrationType.HEAVY_LOAD, viewId, sessionId);
+        rumLogger.debug(`Detected heavy load: ${duration}ms on span ${span.name}`);
       }
-    }
-  }
-
-  /**
-   * Increments the frustration counter.
-   * @param type - The type of frustration.
-   * @param viewId - The view ID.
-   * @param sessionId - The session ID.
-   */
-  private incrementFrustrationCounter(
-    type: FrustrationType,
-    viewId: string,
-    sessionId: string,
-  ): void {
-    if (!this.metricsEnabled) return;
-    this.initializeMetrics();
-
-    if (this.frustrationCounter) {
-      rumLogger.debug(`Recording frustration metric for ${type}`);
-      this.frustrationCounter.add(1, {
-        [ATTR_FRUSTRATION_TYPE]: type,
-        [ATTR_VIEW_ID]: viewId,
-        [ATTR_SESSION_ID]: sessionId,
-      });
     }
   }
 

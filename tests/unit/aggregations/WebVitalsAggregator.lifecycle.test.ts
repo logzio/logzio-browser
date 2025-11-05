@@ -25,16 +25,8 @@ jest.mock('web-vitals/attribution', () => ({
 
 // Mock OTel API using centralized helper
 import { createOtelApiMock } from '../__utils__/otelApiMocks';
-const histogramRecordMock = jest.fn();
-const createHistogramMock = jest.fn(() => ({ record: histogramRecordMock }));
-const getMeterMock = jest.fn(() => ({ createHistogram: createHistogramMock }));
 
-jest.mock('@opentelemetry/api', () => ({
-  ...createOtelApiMock(),
-  metrics: {
-    getMeter: () => getMeterMock(),
-  },
-}));
+jest.mock('@opentelemetry/api', () => createOtelApiMock());
 
 // Mock instrumentation constants to avoid pulling heavy modules
 jest.mock('@src/instrumentation', () => ({
@@ -45,14 +37,12 @@ import { WebVitalsAggregator } from '@src/aggregations/WebVitalsAggregator';
 
 describe('WebVitalsAggregator - lifecycle', () => {
   beforeEach(() => {
-    // reset captured callbacks and mocks
+    // reset captured callbacks
     fcpCb = lcpCb = ttfbCb = clsCb = inpCb = undefined;
-    histogramRecordMock.mockClear();
-    createHistogramMock.mockClear();
   });
 
   it('start should register all observers and reset state', () => {
-    const agg = new WebVitalsAggregator(null, 'session-123', 'view-456');
+    const agg = new WebVitalsAggregator('session-123', 'view-456');
 
     // First start registers callbacks
     agg.start();
@@ -73,7 +63,7 @@ describe('WebVitalsAggregator - lifecycle', () => {
   });
 
   it('stop should trigger cleanup (empties collected metrics)', () => {
-    const agg = new WebVitalsAggregator(null, 'session-123', 'view-456');
+    const agg = new WebVitalsAggregator('session-123', 'view-456');
     agg.start();
     clsCb?.({ name: 'CLS', value: 0.02, attribution: {} });
 
@@ -83,7 +73,7 @@ describe('WebVitalsAggregator - lifecycle', () => {
   });
 
   it('getCollectedMetrics should return a defensive copy', () => {
-    const agg = new WebVitalsAggregator(null, 'session-123', 'view-456');
+    const agg = new WebVitalsAggregator('session-123', 'view-456');
     agg.start();
     lcpCb?.({ name: 'LCP', value: 2500, attribution: {} });
 
@@ -97,7 +87,7 @@ describe('WebVitalsAggregator - lifecycle', () => {
   });
 
   it('start should be idempotent (no-throw on repeated calls)', () => {
-    const agg = new WebVitalsAggregator(null, 'session-123', 'view-456');
+    const agg = new WebVitalsAggregator('session-123', 'view-456');
     expect(() => {
       agg.start();
       agg.start();

@@ -20,15 +20,13 @@ jest.mock('@src/context/LogzioContextManager', () => ({
 jest.mock('@src/aggregations/WebVitalsAggregator', () => ({
   WebVitalsAggregator: jest.fn().mockImplementation(() => ({
     start: jest.fn(),
-    flushMetrics: jest.fn(),
+    flushWebVitals: jest.fn(),
   })),
 }));
 
 jest.mock('@src/openTelemetry/setup', () => ({
   OpenTelemetryProvider: {
-    getInstance: jest.fn(() => ({
-      getMeterProvider: jest.fn(() => ({})),
-    })),
+    getInstance: jest.fn(() => ({})),
   },
 }));
 

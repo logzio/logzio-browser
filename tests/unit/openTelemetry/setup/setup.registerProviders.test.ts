@@ -5,10 +5,8 @@ import { createConfig } from '../../__utils__/configFactory';
 import { createProviderInstance, resetProviderSingleton } from '../../__utils__/providerHelpers';
 import {
   mockGetTraceProvider,
-  mockGetMetricsProvider,
   mockGetLogProvider,
   mockGetContextManagerInstance,
-  mockSetGlobalMeterProvider,
   mockSetGlobalLoggerProvider,
 } from '../../__utils__/otelMocks';
 
@@ -60,30 +58,6 @@ describe('OpenTelemetryProvider Registration', () => {
   });
 
   describe('global provider registration', () => {
-    it('should set global meter provider only when metrics provider exists', () => {
-      const config = createConfig({
-        tokens: { traces: 'trace-token', metrics: 'metrics-token' },
-      });
-      const mockMetricsProvider = { forceFlush: jest.fn(), shutdown: jest.fn() };
-      mockGetMetricsProvider.mockReturnValue(mockMetricsProvider);
-
-      const provider = createProviderInstance(config);
-      provider.registerProviders();
-
-      expect(mockSetGlobalMeterProvider).toHaveBeenCalledWith(mockMetricsProvider);
-    });
-
-    it('should not set global meter provider when metrics provider does not exist', () => {
-      const config = createConfig({
-        tokens: { traces: 'trace-token' },
-      });
-
-      const provider = createProviderInstance(config);
-      provider.registerProviders();
-
-      expect(mockSetGlobalMeterProvider).not.toHaveBeenCalled();
-    });
-
     it('should set global logger provider only when log provider exists', () => {
       const config = createConfig({
         tokens: { traces: 'trace-token', logs: 'logs-token' },

@@ -44,7 +44,6 @@ export class RUMConfig {
     this.region = config.region!;
     this.tokens = {
       logs: config.tokens!.logs ?? '',
-      metrics: config.tokens!.metrics ?? '',
       traces: config.tokens!.traces,
     };
     this.endpoint = {
@@ -146,22 +145,20 @@ export class RUMConfig {
    * Validates the conditional fields.
    */
   private validateConditionalFields(): void {
-    if (!this.tokens.metrics && (this.enable?.webVitals || this.enable?.frustrationDetection)) {
-      rumLogger.warn(
-        'Metrics token is required in RUM configuration when web vitals or frustration detection is enabled. Metrics will not be sent.',
-      );
-      this.enable.webVitals = DEFAULT_DISABLE_STATE;
-    }
     if (
       !this.tokens.logs &&
-      (this.enable?.errorTracking || this.enable?.viewEvents || this.enable?.consoleLogs)
+      (this.enable?.errorTracking ||
+        this.enable?.viewEvents ||
+        this.enable?.consoleLogs ||
+        this.enable?.webVitals)
     ) {
       rumLogger.warn(
-        'Logs token is required in RUM configuration when error tracking or view events are enabled. Exceptions stacktraces and view end events will not be sent.',
+        'Logs token is required in RUM configuration when error tracking, view events, console logs, or web vitals are enabled. These features will not be sent.',
       );
       this.enable.errorTracking = DEFAULT_DISABLE_STATE;
       this.enable.viewEvents = DEFAULT_DISABLE_STATE;
       this.enable.consoleLogs = DEFAULT_DISABLE_STATE;
+      this.enable.webVitals = DEFAULT_DISABLE_STATE;
     }
   }
 }

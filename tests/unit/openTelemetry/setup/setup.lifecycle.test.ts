@@ -3,11 +3,7 @@
  */
 import { createConfig } from '../../__utils__/configFactory';
 import { createProviderInstance, resetProviderSingleton } from '../../__utils__/providerHelpers';
-import {
-  mockGetTraceProvider,
-  mockGetMetricsProvider,
-  mockGetLogProvider,
-} from '../../__utils__/otelMocks';
+import { mockGetTraceProvider, mockGetLogProvider } from '../../__utils__/otelMocks';
 import { OpenTelemetryProvider } from '@src/openTelemetry/setup';
 
 describe('OpenTelemetryProvider Lifecycle', () => {
@@ -19,21 +15,18 @@ describe('OpenTelemetryProvider Lifecycle', () => {
   describe('forceFlush', () => {
     it('should call forceFlush on all available providers', () => {
       const config = createConfig({
-        tokens: { traces: 'trace-token', metrics: 'metrics-token', logs: 'logs-token' },
+        tokens: { traces: 'trace-token', logs: 'logs-token' },
       });
       const mockTraceProvider = { register: jest.fn(), forceFlush: jest.fn(), shutdown: jest.fn() };
-      const mockMetricsProvider = { forceFlush: jest.fn(), shutdown: jest.fn() };
       const mockLogProvider = { forceFlush: jest.fn(), shutdown: jest.fn() };
 
       mockGetTraceProvider.mockReturnValue(mockTraceProvider);
-      mockGetMetricsProvider.mockReturnValue(mockMetricsProvider);
       mockGetLogProvider.mockReturnValue(mockLogProvider);
 
       const provider = createProviderInstance(config);
       provider.forceFlush();
 
       expect(mockTraceProvider.forceFlush).toHaveBeenCalledTimes(1);
-      expect(mockMetricsProvider.forceFlush).toHaveBeenCalledTimes(1);
       expect(mockLogProvider.forceFlush).toHaveBeenCalledTimes(1);
     });
 
@@ -54,14 +47,10 @@ describe('OpenTelemetryProvider Lifecycle', () => {
   describe('shutdown', () => {
     it('should call shutdown on all available providers and returns resolved promise', async () => {
       const config = createConfig({
-        tokens: { traces: 'trace-token', metrics: 'metrics-token', logs: 'logs-token' },
+        tokens: { traces: 'trace-token', logs: 'logs-token' },
       });
       const mockTraceProvider = {
         register: jest.fn(),
-        forceFlush: jest.fn(),
-        shutdown: jest.fn().mockResolvedValue(undefined),
-      };
-      const mockMetricsProvider = {
         forceFlush: jest.fn(),
         shutdown: jest.fn().mockResolvedValue(undefined),
       };
@@ -71,14 +60,12 @@ describe('OpenTelemetryProvider Lifecycle', () => {
       };
 
       mockGetTraceProvider.mockReturnValue(mockTraceProvider);
-      mockGetMetricsProvider.mockReturnValue(mockMetricsProvider);
       mockGetLogProvider.mockReturnValue(mockLogProvider);
 
       createProviderInstance(config);
       const result = await OpenTelemetryProvider.shutdown();
 
       expect(mockTraceProvider.shutdown).toHaveBeenCalledTimes(1);
-      expect(mockMetricsProvider.shutdown).toHaveBeenCalledTimes(1);
       expect(mockLogProvider.shutdown).toHaveBeenCalledTimes(1);
       expect(result).toBeUndefined();
     });
@@ -99,32 +86,6 @@ describe('OpenTelemetryProvider Lifecycle', () => {
 
       expect(mockTraceProvider.shutdown).toHaveBeenCalledTimes(1);
       expect(result).toBeUndefined();
-    });
-  });
-
-  describe('getMeterProvider', () => {
-    it('should return metrics provider when it exists', () => {
-      const config = createConfig({
-        tokens: { traces: 'trace-token', metrics: 'metrics-token' },
-      });
-      const mockMetricsProvider = { forceFlush: jest.fn(), shutdown: jest.fn() };
-      mockGetMetricsProvider.mockReturnValue(mockMetricsProvider);
-
-      const provider = createProviderInstance(config);
-      const result = provider.getMeterProvider();
-
-      expect(result).toBe(mockMetricsProvider);
-    });
-
-    it('should return null when metrics provider does not exist', () => {
-      const config = createConfig({
-        tokens: { traces: 'trace-token' }, // no metrics token
-      });
-
-      const provider = createProviderInstance(config);
-      const result = provider.getMeterProvider();
-
-      expect(result).toBeNull();
     });
   });
 });

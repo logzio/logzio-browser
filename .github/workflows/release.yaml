@@ -1,7 +1,7 @@
 name: Release New RUM Library Version
 
 permissions:
-  id-token: write  # Required for OIDC
+  id-token: write # Required for OIDC
   contents: read
 
 on:

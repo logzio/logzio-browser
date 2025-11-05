@@ -149,8 +149,6 @@ export class ErrorTrackingInstrumentation extends InstrumentationBase {
         return SpanName.RUNTIME_EXCEPTION;
       case ErrorCategory.UNHANDLED_REJECTION:
         return SpanName.APP_EXCEPTION;
-      case ErrorCategory.MANUAL_ERROR:
-        return SpanName.RUM_EXCEPTION;
       default:
         return SpanName.RUM_EXCEPTION;
     }

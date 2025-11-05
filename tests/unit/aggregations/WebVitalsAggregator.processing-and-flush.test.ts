@@ -37,79 +37,98 @@ jest.mock('@src/instrumentation', () => ({
 
 // Mock OTel API using centralized helper
 import { createOtelApiMock } from '../__utils__/otelApiMocks';
-const histogramRecordMock = jest.fn();
-const createHistogramMock = jest.fn(() => ({ record: histogramRecordMock }));
-const getMeterMock = jest.fn(() => ({ createHistogram: createHistogramMock }));
+const logEmitMock = jest.fn();
+const getLoggerMock = jest.fn(() => ({ emit: logEmitMock }));
 
-jest.mock('@opentelemetry/api', () => ({
-  ...createOtelApiMock(),
-  metrics: {
-    getMeter: () => getMeterMock(),
+jest.mock('@opentelemetry/api', () => createOtelApiMock());
+
+jest.mock('@opentelemetry/api-logs', () => ({
+  logs: {
+    getLogger: () => getLoggerMock(),
   },
 }));
 
 import { WebVitalsAggregator } from '@src/aggregations/WebVitalsAggregator';
 
-class MockMeterProvider {
-  public forceFlush = jest.fn();
-}
-
 describe('WebVitalsAggregator - processing and flush', () => {
   beforeEach(() => {
     fcpCb = lcpCb = ttfbCb = clsCb = inpCb = undefined;
-    histogramRecordMock.mockClear();
-    createHistogramMock.mockClear();
-    getMeterMock.mockClear();
+    logEmitMock.mockClear();
+    getLoggerMock.mockClear();
   });
 
-  it('should record FCP with correct histogram name and unit ms', () => {
-    const agg = new WebVitalsAggregator(null, 'session-123', 'view-456');
+  it('should emit FCP as a log with correct attributes', () => {
+    const agg = new WebVitalsAggregator('session-123', 'view-456');
     agg.start();
 
-    fcpCb?.({ name: 'FCP', value: 123, attribution: {} });
+    fcpCb?.({ name: 'FCP', value: 123, id: 'v1-123', rating: 'good', attribution: {} });
 
-    agg.flushMetrics();
+    agg.flushWebVitals();
 
-    expect(getMeterMock).toHaveBeenCalled();
-    expect(createHistogramMock).toHaveBeenCalledWith(
-      'logzio_rum_fcp',
-      expect.objectContaining({ unit: 'ms' }),
-    );
-    expect(histogramRecordMock).toHaveBeenCalledWith(
-      123,
-      expect.objectContaining({ 'request.path': expect.any(String) }),
+    expect(getLoggerMock).toHaveBeenCalled();
+    expect(logEmitMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severityText: 'INFO',
+        attributes: expect.objectContaining({
+          'web_vital.name': 'FCP',
+          'web_vital.value': 123,
+          'web_vital.rating': 'good',
+          'web_vital.id': 'v1-123',
+          'session.id': 'session-123',
+          'view.id': 'view-456',
+          'request.path': expect.any(String),
+        }),
+      }),
     );
   });
 
-  it('should handle CLS unit as unitless', () => {
-    const agg = new WebVitalsAggregator(null, 'session-123', 'view-456');
+  it('should emit CLS as a log with correct attributes', () => {
+    const agg = new WebVitalsAggregator('session-123', 'view-456');
     agg.start();
-    clsCb?.({ name: 'CLS', value: 0.02, attribution: {} });
-    agg.flushMetrics();
-    expect(createHistogramMock).toHaveBeenCalledWith(
-      'logzio_rum_cls',
-      expect.objectContaining({ unit: 'unitless' }),
+    clsCb?.({ name: 'CLS', value: 0.02, id: 'v1-cls', rating: 'good', attribution: {} });
+    agg.flushWebVitals();
+    expect(logEmitMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severityText: 'INFO',
+        attributes: expect.objectContaining({
+          'web_vital.name': 'CLS',
+          'web_vital.value': 0.02,
+        }),
+      }),
     );
   });
 
-  it('should include request.path in attributes', () => {
-    const agg = new WebVitalsAggregator(null, 'session-123', 'view-456');
+  it('should include request.path and session/view IDs in log attributes', () => {
+    const agg = new WebVitalsAggregator('session-123', 'view-456');
     agg.start();
-    lcpCb?.({ name: 'LCP', value: 2500, attribution: {} });
-    agg.flushMetrics();
-    expect(histogramRecordMock).toHaveBeenCalledWith(
-      2500,
-      expect.objectContaining({ 'request.path': expect.any(String) }),
+    lcpCb?.({
+      name: 'LCP',
+      value: 2500,
+      id: 'v1-lcp',
+      rating: 'needs-improvement',
+      attribution: {},
+    });
+    agg.flushWebVitals();
+    expect(logEmitMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attributes: expect.objectContaining({
+          'request.path': expect.any(String),
+          'session.id': 'session-123',
+          'view.id': 'view-456',
+        }),
+      }),
     );
   });
 
-  it('should record metrics with only request.path attribute', () => {
-    const agg = new WebVitalsAggregator(null, 'session-123', 'view-456');
+  it('should emit logs with extended attribution data for all metrics', () => {
+    const agg = new WebVitalsAggregator('session-123', 'view-456');
     agg.start();
 
     clsCb?.({
       name: 'CLS',
       value: 1,
+      id: 'v1-cls',
+      rating: 'poor',
       attribution: {
         largestShiftTarget: 'div',
         largestShiftTime: 1,
@@ -127,6 +146,8 @@ describe('WebVitalsAggregator - processing and flush', () => {
     fcpCb?.({
       name: 'FCP',
       value: 2,
+      id: 'v1-fcp',
+      rating: 'good',
       attribution: {
         timeToFirstByte: 1,
         firstByteToFCP: 1,
@@ -143,6 +164,8 @@ describe('WebVitalsAggregator - processing and flush', () => {
     lcpCb?.({
       name: 'LCP',
       value: 3,
+      id: 'v1-lcp',
+      rating: 'good',
       attribution: {
         target: 'img',
         url: 'https://asset',
@@ -163,6 +186,8 @@ describe('WebVitalsAggregator - processing and flush', () => {
     ttfbCb?.({
       name: 'TTFB',
       value: 4,
+      id: 'v1-ttfb',
+      rating: 'good',
       attribution: {
         waitingDuration: 1,
         cacheDuration: 2,
@@ -178,6 +203,8 @@ describe('WebVitalsAggregator - processing and flush', () => {
     inpCb?.({
       name: 'INP',
       value: 5,
+      id: 'v1-inp',
+      rating: 'good',
       attribution: {
         interactionTarget: 'button',
         interactionTime: 10,
@@ -200,41 +227,37 @@ describe('WebVitalsAggregator - processing and flush', () => {
       },
     });
 
-    agg.flushMetrics();
+    agg.flushWebVitals();
 
-    const calls = histogramRecordMock.mock.calls.map(([, attrs]) => attrs);
-    // All metrics should only have request.path attribute
-    expect(calls).toHaveLength(5);
-    calls.forEach((attrs) => {
-      expect(attrs).toEqual({ 'request.path': expect.any(String) });
+    // All 5 web vitals should be emitted as logs
+    expect(logEmitMock).toHaveBeenCalledTimes(5);
+
+    // Verify each log has the web_vital event type and includes attribution data
+    const calls = logEmitMock.mock.calls;
+    calls.forEach(([logRecord]) => {
+      expect(logRecord.severityText).toBe('INFO');
+      expect(logRecord.attributes['event_type']).toBe('web_vital');
+      expect(logRecord.attributes['session.id']).toBe('session-123');
+      expect(logRecord.attributes['view.id']).toBe('view-456');
+      expect(logRecord.attributes['request.path']).toBeDefined();
     });
   });
 
   it('should handle no metrics -> flush as a no-op besides cleanup', () => {
-    const agg = new WebVitalsAggregator(null, 'session-123', 'view-456');
+    const agg = new WebVitalsAggregator('session-123', 'view-456');
     agg.start();
-    agg.flushMetrics();
-    expect(createHistogramMock).not.toHaveBeenCalled();
-    expect(histogramRecordMock).not.toHaveBeenCalled();
+    agg.flushWebVitals();
+    expect(logEmitMock).not.toHaveBeenCalled();
     expect(Object.keys(agg.getCollectedMetrics())).toHaveLength(0);
   });
 
-  it('should handle multiple metrics recorded -> all flushed', () => {
-    const agg = new WebVitalsAggregator(null, 'session-123', 'view-456');
+  it('should handle multiple metrics recorded -> all flushed as logs', () => {
+    const agg = new WebVitalsAggregator('session-123', 'view-456');
     agg.start();
-    fcpCb?.({ name: 'FCP', value: 11, attribution: {} });
-    lcpCb?.({ name: 'LCP', value: 22, attribution: {} });
-    agg.flushMetrics();
-    // Two record calls
-    expect(histogramRecordMock.mock.calls.length).toBe(2);
-  });
-
-  it('should call meterProvider.forceFlush when provided', () => {
-    const provider = new MockMeterProvider();
-    const agg = new WebVitalsAggregator(provider as any, 'session-123', 'view-456');
-    agg.start();
-    ttfbCb?.({ name: 'TTFB', value: 77, attribution: {} });
-    agg.flushMetrics();
-    expect(provider.forceFlush).toHaveBeenCalledTimes(1);
+    fcpCb?.({ name: 'FCP', value: 11, id: 'v1-fcp', rating: 'good', attribution: {} });
+    lcpCb?.({ name: 'LCP', value: 22, id: 'v1-lcp', rating: 'good', attribution: {} });
+    agg.flushWebVitals();
+    // Two log emit calls
+    expect(logEmitMock).toHaveBeenCalledTimes(2);
   });
 });
