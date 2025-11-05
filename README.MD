@@ -29,6 +29,8 @@ npm install @logzio/browser
 Call `LogzioRUM.init()` to initialize the RUM client. This should be done as early as possible in your application lifecycle.
 
 ```javascript
+import { LogzioRUM } from '@logzio/browser';
+
 LogzioRUM.init({
   region: <<LOGZIO_REGION_CODE>>,
   tokens: {
