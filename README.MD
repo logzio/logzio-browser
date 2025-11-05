@@ -14,7 +14,7 @@ This package wraps [OpenTelemetry JavaScript for web](https://opentelemetry.io/)
   - [Configuration options](#configuration-options)
   - [Dynamic attributes inject](#dynamically-inject-attributes)
   - [Correlate with Backend Traces](#correlate-browser-traces-with-backend-traces)
-- [Collected Metrics](#collected-metrics)
+- [Collected Data](#collected-data)
 - [Changelog](./CHANGELOG.md)
 - [Contributing](./CONTRIBUTING.md)
 
