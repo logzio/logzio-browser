@@ -2,6 +2,11 @@
 
 <!-- next version -->
 
+## 1.2.0
+
+- Replace `ErrorTrackingInstrumentation` with OTEL's `instrumentation-web-exception`.
+- Update dependencies versions
+
 ## 1.1.0
 
 - **Breaking changes**

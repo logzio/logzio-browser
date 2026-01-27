@@ -11,6 +11,7 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/../setup.ts'],
   moduleNameMapper: {
     '^@src/(.*)$': '<rootDir>/../../src/$1',
+    '^uuid$': '<rootDir>/__utils__/uuidMock.ts',
   },
   transform: {
     '^.+\\.tsx?$': [
@@ -21,6 +22,7 @@ module.exports = {
       },
     ],
   },
+  transformIgnorePatterns: ['/node_modules/(?!(uuid|@opentelemetry)/)'],
   coverageThreshold: {
     global: {
       branches: 80,

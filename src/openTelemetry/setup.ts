@@ -9,9 +9,10 @@ import { logs } from '@opentelemetry/api-logs';
 import { DocumentLoadInstrumentation } from '@opentelemetry/instrumentation-document-load';
 import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch';
 import { XMLHttpRequestInstrumentation } from '@opentelemetry/instrumentation-xml-http-request';
+import { ExceptionInstrumentation } from '@opentelemetry/instrumentation-web-exception';
 import { RUMConfig } from '../config';
 import {
-  ErrorTrackingInstrumentation,
+  ExceptionHelper,
   LogzioUserInteractionInstrumentation,
   ConsoleLogsInstrumentation,
 } from '../instrumentation';
@@ -235,7 +236,11 @@ export class OpenTelemetryProvider {
     }
     if (this.config.enable?.errorTracking) {
       rumLogger.debug('Registering error tracking instrumentation');
-      instrumentations.push(new ErrorTrackingInstrumentation({}));
+      instrumentations.push(
+        new ExceptionInstrumentation({
+          applyCustomAttributes: (error) => ExceptionHelper.getCustomAttributes(error),
+        }),
+      );
     }
 
     if (this.config.enable?.consoleLogs) {
