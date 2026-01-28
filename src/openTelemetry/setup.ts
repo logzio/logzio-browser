@@ -129,7 +129,10 @@ export class OpenTelemetryProvider {
   public setSessionManager(sessionManager: SessionManager): void {
     try {
       // Wire session manager to span processors
-      const spanProcessors = (this.traceProvider as any)._config?.spanProcessors || [];
+      const spanProcessors =
+        (this.traceProvider as any)._activeSpanProcessor?._spanProcessors ||
+        (this.traceProvider as any)._config?.spanProcessors ||
+        [];
       spanProcessors.forEach((processor: any) => {
         if (processor && typeof processor.setSessionManager === 'function') {
           processor.setSessionManager(sessionManager);
@@ -137,7 +140,10 @@ export class OpenTelemetryProvider {
       });
 
       // Wire session manager to log processors
-      const logProcessors = (this.logProvider as any)?._config?.processors || [];
+      const logProcessors =
+        (this.logProvider as any)?._sharedState?.registeredLogRecordProcessors ||
+        (this.logProvider as any)?._config?.processors ||
+        [];
       logProcessors.forEach((processor: any) => {
         if (processor && typeof processor.setSessionManager === 'function') {
           processor.setSessionManager(sessionManager);
