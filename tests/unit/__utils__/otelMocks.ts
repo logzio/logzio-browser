@@ -54,9 +54,13 @@ jest.mock('@opentelemetry/api-logs', () => ({
 // Mock instrumentation registration
 export const mockRegisterInstrumentations = jest.fn();
 
-jest.mock('@opentelemetry/instrumentation', () => ({
-  registerInstrumentations: mockRegisterInstrumentations,
-}));
+jest.mock('@opentelemetry/instrumentation', () => {
+  const actualModule = jest.requireActual('@opentelemetry/instrumentation');
+  return {
+    ...actualModule,
+    registerInstrumentations: mockRegisterInstrumentations,
+  };
+});
 
 // Mock instrumentations
 export const MockDocumentLoadInstrumentation = jest
@@ -82,9 +86,6 @@ jest.mock('@opentelemetry/instrumentation-xml-http-request', () => ({
 }));
 
 // Mock custom instrumentations
-export const MockErrorTrackingInstrumentation = jest
-  .fn()
-  .mockImplementation((config) => ({ type: 'ErrorTracking', config }));
 export const MockLogzioUserInteractionInstrumentation = jest
   .fn()
   .mockImplementation((config) => ({ type: 'UserInteraction', config }));
@@ -93,7 +94,9 @@ export const MockConsoleLogsInstrumentation = jest
   .mockImplementation((config) => ({ type: 'ConsoleLogs', config }));
 
 jest.mock('@src/instrumentation', () => ({
-  ErrorTrackingInstrumentation: MockErrorTrackingInstrumentation,
+  ExceptionHelper: {
+    getCustomAttributes: jest.fn(),
+  },
   LogzioUserInteractionInstrumentation: MockLogzioUserInteractionInstrumentation,
   ConsoleLogsInstrumentation: MockConsoleLogsInstrumentation,
 }));

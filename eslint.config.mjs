@@ -32,6 +32,14 @@ export default defineConfig([
         ...globals.node,
       },
     },
+    settings: {
+      'import/resolver': {
+        typescript: {
+          project: ['./tsconfig.json'],
+        },
+        node: true,
+      },
+    },
     plugins: { jest: (await import('eslint-plugin-jest')).default },
     extends: [
       js.configs.recommended,

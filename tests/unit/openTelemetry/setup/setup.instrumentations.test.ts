@@ -1,6 +1,7 @@
 /**
  * Tests for OpenTelemetryProvider instrumentation registration
  */
+import { ExceptionInstrumentation } from '@opentelemetry/instrumentation-web-exception';
 import { createConfig } from '../../__utils__/configFactory';
 import { createProviderInstance, resetProviderSingleton } from '../../__utils__/providerHelpers';
 import {
@@ -8,7 +9,6 @@ import {
   MockDocumentLoadInstrumentation,
   MockFetchInstrumentation,
   MockXMLHttpRequestInstrumentation,
-  MockErrorTrackingInstrumentation,
   MockLogzioUserInteractionInstrumentation,
   MockConsoleLogsInstrumentation,
 } from '../../__utils__/otelMocks';
@@ -119,12 +119,12 @@ describe('OpenTelemetryProvider Instrumentation Registration', () => {
       const provider = createProviderInstance(config);
       provider.registerInstrumentations();
 
-      expect(MockErrorTrackingInstrumentation).toHaveBeenCalledWith({});
-      expect(mockRegisterInstrumentations).toHaveBeenCalledWith({
-        instrumentations: expect.arrayContaining([
-          expect.objectContaining({ type: 'ErrorTracking' }),
-        ]),
-      });
+      const registeredCall = mockRegisterInstrumentations.mock.calls[0][0];
+      const instrumentations = registeredCall.instrumentations;
+
+      expect(
+        instrumentations.some((inst: unknown) => inst instanceof ExceptionInstrumentation),
+      ).toBe(true);
     });
   });
 
@@ -166,7 +166,7 @@ describe('OpenTelemetryProvider Instrumentation Registration', () => {
       expect(instrumentations[1]).toEqual(expect.objectContaining({ type: 'DocumentLoad' }));
       expect(instrumentations[2]).toEqual(expect.objectContaining({ type: 'Fetch' }));
       expect(instrumentations[3]).toEqual(expect.objectContaining({ type: 'XHR' }));
-      expect(instrumentations[4]).toEqual(expect.objectContaining({ type: 'ErrorTracking' }));
+      expect(instrumentations[4]).toBeInstanceOf(ExceptionInstrumentation);
       expect(instrumentations[5]).toEqual(expect.objectContaining({ type: 'ConsoleLogs' }));
     });
 

@@ -9,9 +9,10 @@ import { logs } from '@opentelemetry/api-logs';
 import { DocumentLoadInstrumentation } from '@opentelemetry/instrumentation-document-load';
 import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch';
 import { XMLHttpRequestInstrumentation } from '@opentelemetry/instrumentation-xml-http-request';
+import { ExceptionInstrumentation } from '@opentelemetry/instrumentation-web-exception';
 import { RUMConfig } from '../config';
 import {
-  ErrorTrackingInstrumentation,
+  ExceptionHelper,
   LogzioUserInteractionInstrumentation,
   ConsoleLogsInstrumentation,
 } from '../instrumentation';
@@ -128,7 +129,10 @@ export class OpenTelemetryProvider {
   public setSessionManager(sessionManager: SessionManager): void {
     try {
       // Wire session manager to span processors
-      const spanProcessors = (this.traceProvider as any)._config?.spanProcessors || [];
+      const spanProcessors =
+        (this.traceProvider as any)._activeSpanProcessor?._spanProcessors ||
+        (this.traceProvider as any)._config?.spanProcessors ||
+        [];
       spanProcessors.forEach((processor: any) => {
         if (processor && typeof processor.setSessionManager === 'function') {
           processor.setSessionManager(sessionManager);
@@ -136,7 +140,10 @@ export class OpenTelemetryProvider {
       });
 
       // Wire session manager to log processors
-      const logProcessors = (this.logProvider as any)?._config?.processors || [];
+      const logProcessors =
+        (this.logProvider as any)?._sharedState?.registeredLogRecordProcessors ||
+        (this.logProvider as any)?._config?.processors ||
+        [];
       logProcessors.forEach((processor: any) => {
         if (processor && typeof processor.setSessionManager === 'function') {
           processor.setSessionManager(sessionManager);
@@ -235,7 +242,11 @@ export class OpenTelemetryProvider {
     }
     if (this.config.enable?.errorTracking) {
       rumLogger.debug('Registering error tracking instrumentation');
-      instrumentations.push(new ErrorTrackingInstrumentation({}));
+      instrumentations.push(
+        new ExceptionInstrumentation({
+          applyCustomAttributes: (error) => ExceptionHelper.getCustomAttributes(error),
+        }),
+      );
     }
 
     if (this.config.enable?.consoleLogs) {
