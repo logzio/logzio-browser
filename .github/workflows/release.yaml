@@ -24,3 +24,5 @@ jobs:
       - run: npm run test:unit
       - run: npm run test:integration
       - run: npm publish --provenance
+        env:
+          NODE_AUTH_TOKEN: '' # Clear setup-node default to allow OIDC Trusted Publishing
