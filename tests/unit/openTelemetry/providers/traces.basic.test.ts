@@ -62,32 +62,6 @@ jest.mock('@opentelemetry/sdk-trace-web', () => ({
       mockConstructCalls.push(['BatchSpanProcessor', exporter, config]);
     }
   },
-  AlwaysOnSampler: class MockAlwaysOnSampler {
-    __type = 'AlwaysOnSampler';
-  },
-  AlwaysOffSampler: class MockAlwaysOffSampler {
-    __type = 'AlwaysOffSampler';
-  },
-  TraceIdRatioBasedSampler: class MockTraceIdRatioBasedSampler {
-    __type = 'TraceIdRatioBasedSampler';
-    ratio: number;
-    constructor(ratio: number) {
-      this.ratio = ratio;
-    }
-  },
-  ParentBasedSampler: class MockParentBasedSampler {
-    __type = 'ParentBasedSampler';
-    root: any;
-    ratio: number | undefined;
-    constructor(config: { root: any }) {
-      this.root = config.root;
-      // Return the root sampler's type for easier testing
-      this.__type = config.root.__type;
-      if (config.root.ratio !== undefined) {
-        this.ratio = config.root.ratio;
-      }
-    }
-  },
 }));
 
 jest.mock('@opentelemetry/exporter-trace-otlp-proto', () => ({
@@ -97,6 +71,24 @@ jest.mock('@opentelemetry/exporter-trace-otlp-proto', () => ({
       this.config = config;
       mockConstructCalls.push(['OTLPTraceExporter', config]);
       exporterInstances.push(this);
+    }
+  },
+}));
+
+jest.mock('@src/openTelemetry/samplers', () => ({
+  SessionSampler: class MockSessionSampler {
+    __type = 'SessionSampler';
+    rate: number;
+    constructor(rate: number) {
+      this.rate = rate;
+      mockConstructCalls.push(['SessionSampler', rate]);
+    }
+    shouldSample() {
+      return { decision: 1 };
+    }
+    reroll() {}
+    toString() {
+      return `SessionSampler{rate=${this.rate}}`;
     }
   },
 }));
@@ -111,7 +103,7 @@ describe('Traces Provider - Basic Functionality', () => {
     const endpoint = 'https://traces.example.com';
     const config = createMockConfig();
 
-    const provider = getTraceProvider(resource, endpoint, config);
+    const { provider } = getTraceProvider(resource, endpoint, config);
 
     // Verify WebTracerProvider was created
     expect(provider).toBeDefined();
@@ -130,7 +122,7 @@ describe('Traces Provider - Basic Functionality', () => {
     const endpoint = 'https://traces.example.com';
     const config = createMockConfig();
 
-    const provider = getTraceProvider(resource, endpoint, config);
+    const { provider } = getTraceProvider(resource, endpoint, config);
 
     // Should return the mocked WebTracerProvider instance
     expect(provider).toBeDefined();
@@ -179,7 +171,7 @@ describe('Traces Provider - Basic Functionality', () => {
       enable: { frustrationDetection: true },
     });
 
-    const provider = getTraceProvider(resource, endpoint, config);
+    const { provider } = getTraceProvider(resource, endpoint, config);
 
     // Verify all expected components were created
     expect(provider).toBeDefined();
@@ -203,8 +195,7 @@ describe('Traces Provider - Basic Functionality', () => {
     // Verify all components are wired correctly
     const options = tracerCall[1];
     expect(options.resource).toBe(resource);
-    expect(options.sampler.__type).toBe('TraceIdRatioBasedSampler');
-    expect(options.sampler.ratio).toBe(0.75);
+    expect(options.sampler.__type).toBe('SessionSampler');
     expect(options.spanProcessors).toHaveLength(4);
   });
 });

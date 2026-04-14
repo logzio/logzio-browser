@@ -4,9 +4,16 @@
 
 // Mock providers
 export const mockGetTraceProvider = jest.fn(() => ({
-  register: jest.fn(),
-  forceFlush: jest.fn(),
-  shutdown: jest.fn().mockResolvedValue(undefined),
+  provider: {
+    register: jest.fn(),
+    forceFlush: jest.fn(),
+    shutdown: jest.fn().mockResolvedValue(undefined),
+  },
+  sampler: {
+    reroll: jest.fn(),
+    shouldSample: jest.fn(() => ({ decision: 1 })),
+    toString: jest.fn(() => 'SessionSampler{rate=100, sampled=true}'),
+  },
 }));
 
 export const mockGetMetricsProvider = jest.fn(() => ({

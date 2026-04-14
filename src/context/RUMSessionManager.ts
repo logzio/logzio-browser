@@ -61,6 +61,7 @@ export class RUMSessionManager {
     rumLogger.debug(`Starting a new session ${this.getSessionId()}.`);
     this.startTime = Date.now();
     this.hasEnded = false;
+    OpenTelemetryProvider.getInstance(this.config).rerollSampling();
     this.resetDurationTimer();
     this.startView();
   }

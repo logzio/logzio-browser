@@ -1,14 +1,9 @@
 import { Resource } from '@opentelemetry/resources';
 import {
-  AlwaysOffSampler,
-  AlwaysOnSampler,
   BatchSpanProcessor,
-  ParentBasedSampler,
-  Sampler,
   SpanExporter,
   SpanProcessor,
   WebTracerProvider,
-  TraceIdRatioBasedSampler,
 } from '@opentelemetry/sdk-trace-web';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
 import { RUMConfig } from '../../config';
@@ -17,10 +12,9 @@ import {
   SessionContextSpanProcessor,
   RequestPathSpanProcessor,
 } from '../processors';
+import { SessionSampler } from '../samplers';
 import { getAuthorizationHeader } from '../../utils/helpers';
 import {
-  MAX_SAMPLING_PERCENTAGE,
-  MIN_SAMPLING_PERCENTAGE,
   MAX_BULK_SIZE,
   MAX_SPAN_WAIT_MS,
   LOGZIO_REGION_HEADER,
@@ -28,26 +22,23 @@ import {
   LOGZIO_DATA_TYPE_HEADER,
 } from './constants';
 
+export interface TraceProviderResult {
+  provider: WebTracerProvider;
+  sampler: SessionSampler;
+}
+
 export function getTraceProvider(
   resource: Resource,
   endpoint: string,
   config: RUMConfig,
-): WebTracerProvider {
-  return new WebTracerProvider({
+): TraceProviderResult {
+  const sampler = new SessionSampler(config.samplingRate);
+  const provider = new WebTracerProvider({
     resource,
-    sampler: getSampler(config),
+    sampler,
     spanProcessors: getSpanProcessors(endpoint, config),
   });
-}
-
-function getSampler(config: RUMConfig): Sampler {
-  if (config.samplingRate === MAX_SAMPLING_PERCENTAGE) return new AlwaysOnSampler();
-  if (config.samplingRate === MIN_SAMPLING_PERCENTAGE) return new AlwaysOffSampler();
-
-  const ratio = config.samplingRate / MAX_SAMPLING_PERCENTAGE;
-  return new ParentBasedSampler({
-    root: new TraceIdRatioBasedSampler(ratio),
-  });
+  return { provider, sampler };
 }
 
 function getSpanProcessors(endpoint: string, config: RUMConfig): SpanProcessor[] {
