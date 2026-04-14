@@ -147,18 +147,14 @@ export class RUMConfig {
   private validateConditionalFields(): void {
     if (
       !this.tokens.logs &&
-      (this.enable?.errorTracking ||
-        this.enable?.viewEvents ||
-        this.enable?.consoleLogs ||
-        this.enable?.webVitals)
+      (this.enable?.errorTracking || this.enable?.viewEvents || this.enable?.consoleLogs)
     ) {
       rumLogger.warn(
-        'Logs token is required in RUM configuration when error tracking, view events, console logs, or web vitals are enabled. These features will not be sent.',
+        'Logs token is required in RUM configuration when error tracking, view events, or console logs are enabled. These features will not be sent.',
       );
       this.enable.errorTracking = DEFAULT_DISABLE_STATE;
       this.enable.viewEvents = DEFAULT_DISABLE_STATE;
       this.enable.consoleLogs = DEFAULT_DISABLE_STATE;
-      this.enable.webVitals = DEFAULT_DISABLE_STATE;
     }
   }
 }
