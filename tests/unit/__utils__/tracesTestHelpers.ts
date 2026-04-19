@@ -47,28 +47,9 @@ export const createTraceWebMocks = () => {
     }
   }
 
-  class MockAlwaysOnSampler {
-    __type = 'AlwaysOnSampler';
-  }
-
-  class MockAlwaysOffSampler {
-    __type = 'AlwaysOffSampler';
-  }
-
-  class MockTraceIdRatioBasedSampler {
-    __type = 'TraceIdRatioBasedSampler';
-    ratio: number;
-    constructor(ratio: number) {
-      this.ratio = ratio;
-    }
-  }
-
   return {
     WebTracerProvider: MockWebTracerProvider,
     BatchSpanProcessor: MockBatchSpanProcessor,
-    AlwaysOnSampler: MockAlwaysOnSampler,
-    AlwaysOffSampler: MockAlwaysOffSampler,
-    TraceIdRatioBasedSampler: MockTraceIdRatioBasedSampler,
   };
 };
 
@@ -89,12 +70,33 @@ export const createOtlpHttpMocks = () => {
 };
 
 /**
+ * Mock SessionSampler for traces provider tests
+ */
+export class MockSessionSampler {
+  __type = 'SessionSampler';
+  rate: number;
+  constructor(rate: number) {
+    this.rate = rate;
+    mockConstructCalls.push(['SessionSampler', rate]);
+  }
+  shouldSample() {
+    return { decision: 1 };
+  }
+  reroll() {}
+  toString() {
+    return `SessionSampler{rate=${this.rate}}`;
+  }
+}
+
+/**
  * Test helper functions
  */
 export const createMockResource = (attributes: any = {}) => {
   const MockResource = createResourceMocks().Resource;
   return new MockResource(attributes);
 };
+
+export const createMockSampler = (rate: number = 50) => new MockSessionSampler(rate);
 
 export const createMockConfig = (overrides: any = {}) => {
   return {
@@ -128,9 +130,9 @@ export const tracesProviderMocks = {
  * Common test data for sampling rates
  */
 export const samplingTestCases = [
-  { rate: 0, expectedType: 'AlwaysOffSampler', description: 'minimum sampling (0%)' },
-  { rate: 25, expectedType: 'TraceIdRatioBasedSampler', description: 'partial sampling (25%)' },
-  { rate: 50, expectedType: 'TraceIdRatioBasedSampler', description: 'half sampling (50%)' },
-  { rate: 75, expectedType: 'TraceIdRatioBasedSampler', description: 'high sampling (75%)' },
-  { rate: 100, expectedType: 'AlwaysOnSampler', description: 'maximum sampling (100%)' },
+  { rate: 0, expectedType: 'SessionSampler', description: 'minimum sampling (0%)' },
+  { rate: 25, expectedType: 'SessionSampler', description: 'partial sampling (25%)' },
+  { rate: 50, expectedType: 'SessionSampler', description: 'half sampling (50%)' },
+  { rate: 75, expectedType: 'SessionSampler', description: 'high sampling (75%)' },
+  { rate: 100, expectedType: 'SessionSampler', description: 'maximum sampling (100%)' },
 ] as const;

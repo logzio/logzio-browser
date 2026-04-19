@@ -37,8 +37,8 @@ describe('OpenTelemetryProvider Registration', () => {
       expect(mockContextManager.enable).toHaveBeenCalledTimes(1);
       // Get the mock instance that was actually used
       expect(mockGetTraceProvider).toHaveBeenCalled();
-      const traceProviderMock = mockGetTraceProvider.mock.results[0].value;
-      expect(traceProviderMock.register).toHaveBeenCalledWith({
+      const traceProvider = mockGetTraceProvider.mock.results[0].value;
+      expect(traceProvider.register).toHaveBeenCalledWith({
         contextManager: mockContextManager,
       });
     });
