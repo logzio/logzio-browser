@@ -24,6 +24,9 @@
   "license": "Apache-2.0",
   "author": "Logz.io",
   "type": "module",
+  "sideEffects": [
+    "./dist/index.js"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
