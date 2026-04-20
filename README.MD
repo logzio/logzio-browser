@@ -35,7 +35,7 @@ LogzioRUM.init({
   region: <<LOGZIO_REGION_CODE>>,
   tokens: {
     traces: <<LOGZIO_TRACES_TOKEN>>,
-    logs: <<LOGZIO_LOGS_TOKEN>>, // Required unless enable.errorTracking, enable.consoleLogs, enable.viewEvents, and enable.webVitals are all set to false
+    logs: <<LOGZIO_LOGS_TOKEN>>, // Required unless enable.errorTracking, enable.consoleLogs and enable.viewEvents are all set to false
   },
   endpoint: {
     url: "<<LOGZIO_RUM_URL>>",
@@ -63,7 +63,7 @@ LogzioRUM.init({
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- | --------------------------- |
 | region                                     | The Logz.io account region code (e.g., `us`, `eu`, `au`, `uk`, `ca`)                                                                                                   | Required          | `us`                        |
 | tokens.traces                              | The Logz.io traces shipping token                                                                                                                                      | Required          | -                           |
-| tokens.logs                                | The Logz.io logs shipping token. **Required unless** `enable.errorTracking`, `enable.consoleLogs`, `enable.viewEvents`, and `enable.webVitals` are all set to `false`. | Required\*        | -                           |
+| tokens.logs                                | The Logz.io logs shipping token. **Required unless** `enable.errorTracking`, `enable.consoleLogs`, and `enable.viewEvents` are all set to `false`.                     | Required\*        | -                           |
 | endpoint.url                               | Endpoint URL to send the collected data to in OTLP.                                                                                                                    | Required          | -                           |
 | endpoint.addSuffix                         | Whether to append data type suffixes (`/traces`, `/logs`) to the endpoint URL.                                                                                         | Optional          | `false`                     |
 | service.name                               | The name of the service being monitored.                                                                                                                               | Optional          | `""`                        |
@@ -76,7 +76,7 @@ LogzioRUM.init({
 | enable.resourceLoad                        | Enable resource loading tracking such as XHR, fetch, scripts, images.                                                                                                  | Optional          | `true`                      |
 | enable.errorTracking                       | Enable exceptions tracking.                                                                                                                                            | Optional          | `true`                      |
 | enable.frustrationDetection                | Enable frustration detection such as rage clicks, dead clicks and heavy load times. Frustration signals will be marked on trace spans.                                 | Optional          | `true`                      |
-| enable.webVitals                           | Enable web vitals tracking (FCP, LCP, CLS, INP, TTFB). Web vitals will be emitted as logs.                                                                             | Optional          | `true`                      |
+| enable.webVitals                           | Enable web vitals tracking (FCP, LCP, CLS, INP, TTFB). Web vitals will be emitted as trace spans.                                                                      | Optional          | `true`                      |
 | enable.viewEvents                          | Enable view end log event which contains the duration to indicate the current session state.                                                                           | Optional          | `false`                     |
 | enable.consoleLogs                         | Enable console logs tracking. If turned off, no console logs will be sent.                                                                                             | Optional          | `false`                     |
 | environmentData.collectOS                  | Enable collection of user operating system name, version and type information.                                                                                         | Optional          | `true`                      |
@@ -129,9 +129,9 @@ The `traceparent` header is not CORS-safelisted, so you need to configure your b
 
 ## Collected Data
 
-### Web Vitals (Logs)
+### Web Vitals (Traces)
 
-When `enable.webVitals` is set to `true`, the SDK collects and emits the following web vitals as log events:
+When `enable.webVitals` is set to `true`, the SDK collects and emits the following web vitals as trace spans:
 
 | Metric                              | Description                                         | Unit             |
 | ----------------------------------- | --------------------------------------------------- | ---------------- |
@@ -141,7 +141,7 @@ When `enable.webVitals` is set to `true`, the SDK collects and emits the followi
 | **INP** (Interaction to Next Paint) | Response time to next paint after user interactions | ms               |
 | **TTFB** (Time to First Byte)       | Time from navigation start to first byte received   | ms               |
 
-Each web vital log includes detailed attribution data to help diagnose performance issues.
+Each web vital span includes detailed attribution data to help diagnose performance issues.
 
 ### Frustration Signals (Traces)
 
