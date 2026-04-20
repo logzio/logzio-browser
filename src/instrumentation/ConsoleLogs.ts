@@ -3,6 +3,10 @@ import { LogRecord, SeverityNumber } from '@opentelemetry/api-logs';
 import { rumLogger } from '../shared';
 import { ATTR_CONSOLE_STACK_TRACE } from './semconv';
 
+// Cache encoder/decoder instances to avoid re-allocation on every log
+const textEncoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
+const textDecoder = typeof TextDecoder !== 'undefined' ? new TextDecoder() : null;
+
 const CONSOLE_METHODS_ARRAY = ['log', 'info', 'warn', 'error', 'debug'] as const;
 
 type ConsoleMethod = (typeof CONSOLE_METHODS_ARRAY)[number];
@@ -244,37 +248,34 @@ export class ConsoleLogsInstrumentation extends InstrumentationBase {
    * Gets UTF-8 byte length of a string.
    */
   private utf8Len(str: string): number {
-    try {
-      return new TextEncoder().encode(str).length;
-    } catch {
-      return str.length; // Fallback for older browsers
+    if (textEncoder) {
+      return textEncoder.encode(str).length;
     }
+    return str.length; // Fallback for older browsers
   }
 
   /**
    * Truncates string to specified byte limit with clear indication.
    */
   private truncateUtf8(str: string, limitBytes: number): string {
-    try {
-      const encoder = new TextEncoder();
-      const decoder = new TextDecoder();
-      const bytes = encoder.encode(str);
+    if (textEncoder && textDecoder) {
+      const bytes = textEncoder.encode(str);
 
       if (bytes.length <= limitBytes) return str;
 
       // For small limits, just truncate without suffix to avoid confusion
       if (limitBytes < 20) {
         const truncatedBytes = bytes.slice(0, limitBytes);
-        return decoder.decode(truncatedBytes);
+        return textDecoder.decode(truncatedBytes);
       }
 
       const suffix = '... [truncated]';
-      const suffixBytes = encoder.encode(suffix).length;
+      const suffixBytes = textEncoder.encode(suffix).length;
       const availableBytes = Math.max(0, limitBytes - suffixBytes);
 
       const truncatedBytes = bytes.slice(0, availableBytes);
-      return decoder.decode(truncatedBytes) + suffix;
-    } catch {
+      return textDecoder.decode(truncatedBytes) + suffix;
+    } else {
       // Fallback for older browsers
       if (limitBytes < 20) {
         return str.substring(0, limitBytes);
