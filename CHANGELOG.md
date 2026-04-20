@@ -10,6 +10,7 @@
 - Add session level sampling via `SessionSampler`, which rerolls sampling decision on session renewal
 - Reduce session activity writes to localStorage
 - Optimize DOM interactivity checks
+- Update dependencies versions
 
 ## 1.2.1
 
