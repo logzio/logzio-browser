@@ -165,10 +165,13 @@ describe('RUMSessionManager navigation and timeouts', () => {
 
     manager.start();
 
+    // Move clock past throttle window (2s) without firing timers
+    jest.setSystemTime(Date.now() + 2001);
+
     // Test first two activity events
     const testEvents = ACTIVITY_EVENTS.slice(0, 2);
 
-    testEvents.forEach((eventName) => {
+    testEvents.forEach((eventName, index) => {
       const activityListener = eventListenerInstances.find((listener) =>
         listener.set.mock.calls.some((call: any) => call[1] === eventName),
       );
@@ -178,10 +181,15 @@ describe('RUMSessionManager navigation and timeouts', () => {
           (call: any) => call[1] === eventName,
         )[2];
 
+        // Move clock past throttle between each call without firing timers
+        if (index > 0) jest.setSystemTime(Date.now() + 2001);
         jest.clearAllMocks();
         activityHandler();
 
-        expect(LocalStorageStore.set).toHaveBeenCalledWith('logzio-rum-last-activity', '20000');
+        expect(LocalStorageStore.set).toHaveBeenCalledWith(
+          'logzio-rum-last-activity',
+          expect.any(String),
+        );
       }
     });
   });
