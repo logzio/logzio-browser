@@ -2,6 +2,13 @@
 
 <!-- next version -->
 
+## 1.3.0
+
+- **Breaking change**:
+  - Web vitals are now only reported as traces (spans)
+- Batch `MutationObserver` notifications with `requestAnimationFrame` to reduce DOM-churn overhead
+- Add session level sampling via `SessionSampler`, which rerolls sampling decision on session renewal
+
 ## 1.2.1
 
 - Optimize batch export settings
