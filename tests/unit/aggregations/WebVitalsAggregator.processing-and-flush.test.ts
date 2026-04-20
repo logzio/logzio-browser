@@ -35,29 +35,32 @@ jest.mock('@src/instrumentation', () => ({
   ATTR_WEB_VITAL_NAVIGATION_TYPE: 'web_vital.navigation_type',
 }));
 
-// Mock OTel API using centralized helper
-import { createOtelApiMock } from '../__utils__/otelApiMocks';
-const logEmitMock = jest.fn();
-const getLoggerMock = jest.fn(() => ({ emit: logEmitMock }));
+// Mock OTel API with tracer mock
+const spanEndMock = jest.fn();
+const startSpanMock = jest.fn(() => ({ end: spanEndMock }));
+const getTracerMock = jest.fn(() => ({ startSpan: startSpanMock }));
 
-jest.mock('@opentelemetry/api', () => createOtelApiMock());
-
-jest.mock('@opentelemetry/api-logs', () => ({
-  logs: {
-    getLogger: () => getLoggerMock(),
-  },
-}));
+jest.mock('@opentelemetry/api', () => {
+  const { createOtelApiMock } = require('../__utils__/otelApiMocks');
+  return {
+    ...createOtelApiMock(),
+    trace: {
+      getTracer: getTracerMock,
+    },
+  };
+});
 
 import { WebVitalsAggregator } from '@src/aggregations/WebVitalsAggregator';
 
 describe('WebVitalsAggregator - processing and flush', () => {
   beforeEach(() => {
     fcpCb = lcpCb = ttfbCb = clsCb = inpCb = undefined;
-    logEmitMock.mockClear();
-    getLoggerMock.mockClear();
+    startSpanMock.mockClear();
+    spanEndMock.mockClear();
+    getTracerMock.mockClear();
   });
 
-  it('should emit FCP as a log with correct attributes', () => {
+  it('should emit FCP as a span with correct attributes', () => {
     const agg = new WebVitalsAggregator('session-123', 'view-456');
     agg.start();
 
@@ -65,10 +68,10 @@ describe('WebVitalsAggregator - processing and flush', () => {
 
     agg.flushWebVitals();
 
-    expect(getLoggerMock).toHaveBeenCalled();
-    expect(logEmitMock).toHaveBeenCalledWith(
+    expect(getTracerMock).toHaveBeenCalled();
+    expect(startSpanMock).toHaveBeenCalledWith(
+      'FCP',
       expect.objectContaining({
-        severityText: 'INFO',
         attributes: expect.objectContaining({
           'web_vital.name': 'FCP',
           'web_vital.value': 123,
@@ -80,25 +83,27 @@ describe('WebVitalsAggregator - processing and flush', () => {
         }),
       }),
     );
+    expect(spanEndMock).toHaveBeenCalled();
   });
 
-  it('should emit CLS as a log with correct attributes', () => {
+  it('should emit CLS as a span with correct attributes', () => {
     const agg = new WebVitalsAggregator('session-123', 'view-456');
     agg.start();
     clsCb?.({ name: 'CLS', value: 0.02, id: 'v1-cls', rating: 'good', attribution: {} });
     agg.flushWebVitals();
-    expect(logEmitMock).toHaveBeenCalledWith(
+    expect(startSpanMock).toHaveBeenCalledWith(
+      'CLS',
       expect.objectContaining({
-        severityText: 'INFO',
         attributes: expect.objectContaining({
           'web_vital.name': 'CLS',
           'web_vital.value': 0.02,
         }),
       }),
     );
+    expect(spanEndMock).toHaveBeenCalled();
   });
 
-  it('should include request.path and session/view IDs in log attributes', () => {
+  it('should include request.path and session/view IDs in span attributes', () => {
     const agg = new WebVitalsAggregator('session-123', 'view-456');
     agg.start();
     lcpCb?.({
@@ -109,7 +114,8 @@ describe('WebVitalsAggregator - processing and flush', () => {
       attribution: {},
     });
     agg.flushWebVitals();
-    expect(logEmitMock).toHaveBeenCalledWith(
+    expect(startSpanMock).toHaveBeenCalledWith(
+      'LCP',
       expect.objectContaining({
         attributes: expect.objectContaining({
           'request.path': expect.any(String),
@@ -118,9 +124,10 @@ describe('WebVitalsAggregator - processing and flush', () => {
         }),
       }),
     );
+    expect(spanEndMock).toHaveBeenCalled();
   });
 
-  it('should emit logs with extended attribution data for all metrics', () => {
+  it('should emit spans with extended attribution data for all metrics', () => {
     const agg = new WebVitalsAggregator('session-123', 'view-456');
     agg.start();
 
@@ -229,17 +236,18 @@ describe('WebVitalsAggregator - processing and flush', () => {
 
     agg.flushWebVitals();
 
-    // All 5 web vitals should be emitted as logs
-    expect(logEmitMock).toHaveBeenCalledTimes(5);
+    // All 5 web vitals should be emitted as spans
+    expect(startSpanMock).toHaveBeenCalledTimes(5);
+    expect(spanEndMock).toHaveBeenCalledTimes(5);
 
-    // Verify each log has the web_vital event type and includes attribution data
-    const calls = logEmitMock.mock.calls;
-    calls.forEach(([logRecord]) => {
-      expect(logRecord.severityText).toBe('INFO');
-      expect(logRecord.attributes['event_type']).toBe('web_vital');
-      expect(logRecord.attributes['session.id']).toBe('session-123');
-      expect(logRecord.attributes['view.id']).toBe('view-456');
-      expect(logRecord.attributes['request.path']).toBeDefined();
+    // Verify each span has the web_vital event type and includes attribution data
+    const calls = startSpanMock.mock.calls as unknown as [string, Record<string, any>][];
+    calls.forEach(([spanName, spanOptions]) => {
+      expect(typeof spanName).toBe('string');
+      expect(spanOptions.attributes['event_type']).toBe('web_vital');
+      expect(spanOptions.attributes['session.id']).toBe('session-123');
+      expect(spanOptions.attributes['view.id']).toBe('view-456');
+      expect(spanOptions.attributes['request.path']).toBeDefined();
     });
   });
 
@@ -247,17 +255,18 @@ describe('WebVitalsAggregator - processing and flush', () => {
     const agg = new WebVitalsAggregator('session-123', 'view-456');
     agg.start();
     agg.flushWebVitals();
-    expect(logEmitMock).not.toHaveBeenCalled();
+    expect(startSpanMock).not.toHaveBeenCalled();
     expect(Object.keys(agg.getCollectedMetrics())).toHaveLength(0);
   });
 
-  it('should handle multiple metrics recorded -> all flushed as logs', () => {
+  it('should handle multiple metrics recorded -> all flushed as spans', () => {
     const agg = new WebVitalsAggregator('session-123', 'view-456');
     agg.start();
     fcpCb?.({ name: 'FCP', value: 11, id: 'v1-fcp', rating: 'good', attribution: {} });
     lcpCb?.({ name: 'LCP', value: 22, id: 'v1-lcp', rating: 'good', attribution: {} });
     agg.flushWebVitals();
-    // Two log emit calls
-    expect(logEmitMock).toHaveBeenCalledTimes(2);
+    // Two span start calls
+    expect(startSpanMock).toHaveBeenCalledTimes(2);
+    expect(spanEndMock).toHaveBeenCalledTimes(2);
   });
 });

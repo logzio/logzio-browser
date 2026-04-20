@@ -30,6 +30,7 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
         expect.anything(),
         'https://whatever/third/party/logzio/endpoint/traces',
         config,
+        expect.anything(),
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),
@@ -55,6 +56,7 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
         expect.anything(),
         'https://custom.endpoint.com/traces',
         config,
+        expect.anything(),
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),
@@ -78,6 +80,7 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
         expect.anything(),
         'https://custom.endpoint.com/traces',
         config,
+        expect.anything(),
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),
@@ -103,6 +106,7 @@ describe('OpenTelemetryProvider Endpoint Resolution', () => {
         expect.anything(),
         'https://custom.endpoint.com/api/v1',
         config,
+        expect.anything(),
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),

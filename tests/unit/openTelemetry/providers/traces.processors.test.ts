@@ -5,6 +5,7 @@ import {
   mockConstructCalls,
   createMockResource,
   createMockConfig,
+  createMockSampler,
   exporterInstances,
 } from '../../__utils__/tracesTestHelpers';
 
@@ -68,20 +69,6 @@ jest.mock('@opentelemetry/sdk-trace-web', () => ({
       mockConstructCalls.push(['BatchSpanProcessor', exporter, config]);
     }
   },
-  TraceIdRatioBasedSampler: class MockTraceIdRatioBasedSampler {
-    __type = 'TraceIdRatioBasedSampler';
-    ratio: number;
-    constructor(ratio: number) {
-      this.ratio = ratio;
-    }
-  },
-  ParentBasedSampler: class MockParentBasedSampler {
-    __type = 'ParentBasedSampler';
-    root: any;
-    constructor(config: { root: any }) {
-      this.root = config.root;
-    }
-  },
 }));
 
 jest.mock('@opentelemetry/exporter-trace-otlp-proto', () => ({
@@ -91,6 +78,24 @@ jest.mock('@opentelemetry/exporter-trace-otlp-proto', () => ({
       this.config = config;
       mockConstructCalls.push(['OTLPTraceExporter', config]);
       exporterInstances.push(this);
+    }
+  },
+}));
+
+jest.mock('@src/openTelemetry/samplers', () => ({
+  SessionSampler: class MockSessionSampler {
+    __type = 'SessionSampler';
+    rate: number;
+    constructor(rate: number) {
+      this.rate = rate;
+      mockConstructCalls.push(['SessionSampler', rate]);
+    }
+    shouldSample() {
+      return { decision: 1 };
+    }
+    reroll() {}
+    toString() {
+      return `SessionSampler{rate=${this.rate}}`;
     }
   },
 }));
@@ -108,7 +113,7 @@ describe('Traces Provider - Span Processors Configuration', () => {
       enable: { frustrationDetection: false },
     });
 
-    getTraceProvider(resource, endpoint, config);
+    getTraceProvider(resource, endpoint, config, createMockSampler());
 
     const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
     const processors = tracerCall[1].spanProcessors;
@@ -132,7 +137,7 @@ describe('Traces Provider - Span Processors Configuration', () => {
       enable: { frustrationDetection: true },
     });
 
-    getTraceProvider(resource, endpoint, config);
+    getTraceProvider(resource, endpoint, config, createMockSampler());
 
     const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
     const processors = tracerCall[1].spanProcessors;
@@ -156,7 +161,7 @@ describe('Traces Provider - Span Processors Configuration', () => {
     const endpoint = 'https://traces.example.com';
     const config = createMockConfig();
 
-    getTraceProvider(resource, endpoint, config);
+    getTraceProvider(resource, endpoint, config, createMockSampler());
 
     const batchProcessorCall = mockConstructCalls.find(([name]) => name === 'BatchSpanProcessor');
     expect(batchProcessorCall).toBeTruthy();
@@ -172,7 +177,7 @@ describe('Traces Provider - Span Processors Configuration', () => {
     const endpoint = 'https://traces.example.com';
     const config = createMockConfig();
 
-    getTraceProvider(resource, endpoint, config);
+    getTraceProvider(resource, endpoint, config, createMockSampler());
 
     const sessionProcessorCall = mockConstructCalls.find(
       ([name]) => name === 'SessionContextSpanProcessor',
@@ -191,7 +196,7 @@ describe('Traces Provider - Span Processors Configuration', () => {
       enable: { frustrationDetection: frustration },
     });
 
-    getTraceProvider(resource, endpoint, config);
+    getTraceProvider(resource, endpoint, config, createMockSampler());
 
     const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
     const processors = tracerCall[1].spanProcessors;

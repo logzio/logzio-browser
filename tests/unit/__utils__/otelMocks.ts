@@ -25,6 +25,16 @@ jest.mock('@src/openTelemetry/providers', () => ({
   getLogProvider: mockGetLogProvider,
 }));
 
+// Mock SessionSampler (used directly in setup.ts constructor)
+export const mockSessionSamplerReroll = jest.fn();
+jest.mock('@src/openTelemetry/samplers', () => ({
+  SessionSampler: jest.fn().mockImplementation(() => ({
+    reroll: mockSessionSamplerReroll,
+    shouldSample: jest.fn(() => ({ decision: 1 })),
+    toString: jest.fn(() => 'SessionSampler{rate=100, sampled=true}'),
+  })),
+}));
+
 // Mock OpenTelemetry API
 export const mockSetGlobalContextManager = jest.fn();
 export const mockSetGlobalMeterProvider = jest.fn();
