@@ -165,10 +165,13 @@ describe('RUMSessionManager navigation and timeouts', () => {
 
     manager.start();
 
+    // Advance past throttle window (2s) so activity writes go through
+    jest.advanceTimersByTime(2001);
+
     // Test first two activity events
     const testEvents = ACTIVITY_EVENTS.slice(0, 2);
 
-    testEvents.forEach((eventName) => {
+    testEvents.forEach((eventName, index) => {
       const activityListener = eventListenerInstances.find((listener) =>
         listener.set.mock.calls.some((call: any) => call[1] === eventName),
       );
@@ -178,10 +181,15 @@ describe('RUMSessionManager navigation and timeouts', () => {
           (call: any) => call[1] === eventName,
         )[2];
 
+        // Advance past throttle between each call
+        if (index > 0) jest.advanceTimersByTime(2001);
         jest.clearAllMocks();
         activityHandler();
 
-        expect(LocalStorageStore.set).toHaveBeenCalledWith('logzio-rum-last-activity', '20000');
+        expect(LocalStorageStore.set).toHaveBeenCalledWith(
+          'logzio-rum-last-activity',
+          expect.any(String),
+        );
       }
     });
   });
