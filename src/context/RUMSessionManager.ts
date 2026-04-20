@@ -35,6 +35,8 @@ export class RUMSessionManager {
   private inactivityInterval: ReturnType<typeof setInterval> | null = null;
   private logsProvider: Logger = logs.getLogger(LOGZIO_RUM_PROVIDER_NAME);
   private hasEnded: boolean = false;
+  private lastActivityWriteTime: number = 0;
+  private static readonly ACTIVITY_WRITE_THROTTLE_MS: number = 2000;
 
   constructor(private readonly config: RUMConfig) {}
 
@@ -402,9 +404,13 @@ export class RUMSessionManager {
 
   /**
    * Updates the last activity time.
+   * Throttled to avoid excessive localStorage writes from high-frequency events (e.g. scroll).
    */
   private updateActivityTime(): void {
-    LocalStorageStore.set(RUMSessionManager.LOGZIO_LAST_ACTIVITY, Date.now().toString());
+    const now = Date.now();
+    if (now - this.lastActivityWriteTime < RUMSessionManager.ACTIVITY_WRITE_THROTTLE_MS) return;
+    this.lastActivityWriteTime = now;
+    LocalStorageStore.set(RUMSessionManager.LOGZIO_LAST_ACTIVITY, now.toString());
   }
 
   /**
