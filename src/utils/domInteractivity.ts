@@ -21,6 +21,26 @@ const PASSIVE_INTERACTIVE_ROLES = new Set([
   'option',
   'tab',
 ]);
+const NON_INTERACTIVE_CONTAINERS = new Set([
+  'html',
+  'body',
+  'div',
+  'span',
+  'p',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'section',
+  'article',
+  'header',
+  'footer',
+  'nav',
+  'main',
+  'aside',
+]);
 
 /**
  * Determines if an element is expected to perform an action when clicked.
@@ -31,6 +51,21 @@ const PASSIVE_INTERACTIVE_ROLES = new Set([
  */
 export function isClickableElement(element: HTMLElement): boolean {
   const tagName = element.tagName.toLowerCase();
+
+  // Fast exit for common non-interactive containers without click handlers or ARIA roles.
+  // This avoids expensive getComputedStyle calls for the majority of DOM elements.
+  if (
+    NON_INTERACTIVE_CONTAINERS.has(tagName) &&
+    !hasClickHandler(element) &&
+    !element.getAttribute('role')
+  ) {
+    return false;
+  }
+
+  // Explicitly exclude common React root containers to avoid false positives from event delegation
+  if (element.id === 'root' || element.id === 'app') {
+    return false;
+  }
 
   // Skip if element is inert or disabled
   if (isElementInert(element)) {
@@ -74,42 +109,9 @@ export function isClickableElement(element: HTMLElement): boolean {
     return true;
   }
 
-  // Explicitly exclude common React root containers to avoid false positives from event delegation
-  const isReactRoot =
-    element.id === 'root' || element.id === 'app' || tagName === 'body' || tagName === 'html';
-  if (isReactRoot) {
-    return false;
-  }
-
   // Elements with click handlers and pointer cursor (strong signal of intentional clickability)
   if (hasClickHandler(element) && hasPointerCursor(element) && element.tabIndex >= 0) {
     return true;
-  }
-
-  // Conservative default: don't track clicks on common non-interactive containers
-  const nonInteractiveContainers = new Set([
-    'html',
-    'body',
-    'div',
-    'span',
-    'p',
-    'h1',
-    'h2',
-    'h3',
-    'h4',
-    'h5',
-    'h6',
-    'section',
-    'article',
-    'header',
-    'footer',
-    'nav',
-    'main',
-    'aside',
-  ]);
-
-  if (nonInteractiveContainers.has(tagName) && !hasClickHandler(element)) {
-    return false;
   }
 
   // Default: track other elements (conservative approach for unknown interactive elements)
