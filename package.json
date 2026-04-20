@@ -36,7 +36,7 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && esbuild src/index.ts --bundle --format=esm --outfile=dist/index.js --minify --target=es2020 --external:@opentelemetry/* --external:web-vitals/* --external:uuid --external:zone.js",
     "prepublishOnly": "npm run build",
     "test": "npm run test:unit && npm run test:integration && npm run test:browser",
     "test:unit": "jest --config tests/unit/jest.config.cjs tests/unit/",
@@ -72,6 +72,7 @@
     "@types/node": "^25.6.0",
     "@typescript-eslint/eslint-plugin": "^8.58.1",
     "@typescript-eslint/parser": "^8.58.1",
+    "esbuild": "^0.28.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-typescript": "^4.4.4",
