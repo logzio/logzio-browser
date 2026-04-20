@@ -8,6 +8,8 @@
   - Web vitals are now only reported as traces (spans)
 - Batch `MutationObserver` notifications with `requestAnimationFrame` to reduce DOM-churn overhead
 - Add session level sampling via `SessionSampler`, which rerolls sampling decision on session renewal
+- Reduce session activity writes to localStorage
+- Optimize DOM interactivity checks
 
 ## 1.2.1
 
