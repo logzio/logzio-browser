@@ -51,19 +51,20 @@ const NON_INTERACTIVE_CONTAINERS = new Set([
  */
 export function isClickableElement(element: HTMLElement): boolean {
   const tagName = element.tagName.toLowerCase();
+  const role = element.getAttribute('role');
 
-  // Fast exit for common non-interactive containers without click handlers or ARIA roles.
+  // Fast exit for common non-interactive containers without click handlers or actionable ARIA roles.
   // This avoids expensive getComputedStyle calls for the majority of DOM elements.
   if (
     NON_INTERACTIVE_CONTAINERS.has(tagName) &&
     !hasClickHandler(element) &&
-    !element.getAttribute('role')
+    !(role && ACTIONABLE_ROLES.has(role))
   ) {
     return false;
   }
 
-  // Explicitly exclude common React root containers to avoid false positives from event delegation
-  if (element.id === 'root' || element.id === 'app') {
+  // Explicitly exclude document/root containers to avoid false positives from event delegation
+  if (tagName === 'html' || tagName === 'body' || element.id === 'root' || element.id === 'app') {
     return false;
   }
 
@@ -104,7 +105,6 @@ export function isClickableElement(element: HTMLElement): boolean {
   }
 
   // Elements with actionable ARIA roles (not disabled)
-  const role = element.getAttribute('role');
   if (role && ACTIONABLE_ROLES.has(role) && !isAriaDisabled(element)) {
     return true;
   }
