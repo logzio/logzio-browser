@@ -116,6 +116,28 @@ describe('domInteractivity', () => {
       (mockElement.hasAttribute as jest.Mock).mockImplementation((attr) => attr === 'href');
       expect(isClickableElement(mockElement)).toBe(true);
     });
+
+    it('should return false for containers with non-actionable roles', () => {
+      mockElement.tagName = 'DIV';
+      (mockElement.getAttribute as jest.Mock).mockImplementation((attr) =>
+        attr === 'role' ? 'presentation' : null,
+      );
+      expect(isClickableElement(mockElement)).toBe(false);
+
+      (mockElement.getAttribute as jest.Mock).mockImplementation((attr) =>
+        attr === 'role' ? 'none' : null,
+      );
+      expect(isClickableElement(mockElement)).toBe(false);
+    });
+
+    it('should return false for body/html even with click handlers', () => {
+      mockElement.tagName = 'BODY';
+      mockElement.onclick = () => {};
+      expect(isClickableElement(mockElement)).toBe(false);
+
+      mockElement.tagName = 'HTML';
+      expect(isClickableElement(mockElement)).toBe(false);
+    });
   });
 
   describe('isPassiveInteractiveControl', () => {

@@ -133,22 +133,24 @@ describe('RUMSessionManager lifecycle and events', () => {
 
     manager.start();
 
-    // Case A: Session exists
+    // Case A: Session exists — move clock past throttle window without firing timers
+    jest.setSystemTime(Date.now() + 2001);
     jest.clearAllMocks();
     (LocalStorageStore.get as jest.Mock).mockReturnValue('existing-session');
 
     manager.resume();
 
-    expect(LocalStorageStore.set).toHaveBeenCalledWith('logzio-rum-last-activity', '10000');
+    expect(LocalStorageStore.set).toHaveBeenCalledWith('logzio-rum-last-activity', '12001');
     expect(RUMView).not.toHaveBeenCalled(); // No renew
 
     // Case B: Session missing
+    jest.setSystemTime(Date.now() + 2001);
     jest.clearAllMocks();
     (LocalStorageStore.get as jest.Mock).mockReturnValue(null);
 
     manager.resume();
 
-    expect(LocalStorageStore.set).toHaveBeenCalledWith('logzio-rum-last-activity', '10000');
+    expect(LocalStorageStore.set).toHaveBeenCalledWith('logzio-rum-last-activity', '14002');
     expect(RUMView).toHaveBeenCalled(); // Renew triggered
   });
 
@@ -169,11 +171,12 @@ describe('RUMSessionManager lifecycle and events', () => {
     visibilityHandler();
     expect(mockOtelInstance.forceFlush).toHaveBeenCalled();
 
-    // Simulate visible
+    // Simulate visible — move clock past throttle window without firing timers
+    jest.setSystemTime(Date.now() + 2001);
     jest.clearAllMocks();
     Object.defineProperty(document, 'hidden', { value: false, writable: true });
     visibilityHandler();
-    expect(LocalStorageStore.set).toHaveBeenCalledWith('logzio-rum-last-activity', '10000');
+    expect(LocalStorageStore.set).toHaveBeenCalledWith('logzio-rum-last-activity', '12001');
   });
 
   it('should end session without clearing session id in beforeunload listener', () => {
@@ -213,6 +216,32 @@ describe('RUMSessionManager lifecycle and events', () => {
     storageHandler({ key: 'logzio-rum-session-id', newValue: 'different-session' });
     expect(viewInstance.end).toHaveBeenCalled();
     expect(RUMView).toHaveBeenCalled(); // Renew triggered
+  });
+
+  it('should throttle activity time writes to localStorage', () => {
+    const config = createConfig({ enable: { navigation: true } });
+    const manager = new RUMSessionManager(config as any);
+
+    manager.start();
+
+    // start() writes activity time at t=10000
+    expect(LocalStorageStore.set).toHaveBeenCalledWith('logzio-rum-last-activity', '10000');
+    jest.clearAllMocks();
+
+    // Calling resume immediately should NOT write again (within 2s throttle)
+    manager.resume();
+    expect(LocalStorageStore.set).not.toHaveBeenCalledWith(
+      'logzio-rum-last-activity',
+      expect.any(String),
+    );
+
+    // Move clock past throttle window without firing timers
+    jest.setSystemTime(Date.now() + 2001);
+    jest.clearAllMocks();
+
+    // Now resume should write again
+    manager.resume();
+    expect(LocalStorageStore.set).toHaveBeenCalledWith('logzio-rum-last-activity', '12001');
   });
 
   it('should clear session id and last activity on shutdown()', () => {
