@@ -68,20 +68,6 @@ jest.mock('@opentelemetry/sdk-trace-web', () => ({
       mockConstructCalls.push(['BatchSpanProcessor', exporter, config]);
     }
   },
-  TraceIdRatioBasedSampler: class MockTraceIdRatioBasedSampler {
-    __type = 'TraceIdRatioBasedSampler';
-    ratio: number;
-    constructor(ratio: number) {
-      this.ratio = ratio;
-    }
-  },
-  ParentBasedSampler: class MockParentBasedSampler {
-    __type = 'ParentBasedSampler';
-    root: any;
-    constructor(config: { root: any }) {
-      this.root = config.root;
-    }
-  },
 }));
 
 jest.mock('@opentelemetry/exporter-trace-otlp-proto', () => ({
@@ -91,6 +77,24 @@ jest.mock('@opentelemetry/exporter-trace-otlp-proto', () => ({
       this.config = config;
       mockConstructCalls.push(['OTLPTraceExporter', config]);
       exporterInstances.push(this);
+    }
+  },
+}));
+
+jest.mock('@src/openTelemetry/samplers', () => ({
+  SessionSampler: class MockSessionSampler {
+    __type = 'SessionSampler';
+    rate: number;
+    constructor(rate: number) {
+      this.rate = rate;
+      mockConstructCalls.push(['SessionSampler', rate]);
+    }
+    shouldSample() {
+      return { decision: 1 };
+    }
+    reroll() {}
+    toString() {
+      return `SessionSampler{rate=${this.rate}}`;
     }
   },
 }));

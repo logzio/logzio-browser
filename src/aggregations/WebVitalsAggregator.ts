@@ -11,7 +11,7 @@ import {
   onCLS,
   onINP,
 } from 'web-vitals/attribution';
-import { logs, Logger } from '@opentelemetry/api-logs';
+import { trace, Tracer } from '@opentelemetry/api';
 import { ATTR_URL_PATH } from '@opentelemetry/semantic-conventions';
 import { AttributeNames as otelAttributeNames } from '@opentelemetry/instrumentation-user-interaction';
 import { LOGZIO_RUM_PROVIDER_NAME, rumLogger } from '../shared';
@@ -29,11 +29,11 @@ import {
 
 /**
  * This class represents the web vitals aggregator.
- * It collects and emits web vitals as logs.
+ * It collects and emits web vitals as spans.
  */
 export class WebVitalsAggregator {
   private collectedMetrics: Record<string, MetricWithAttribution> = {};
-  private logsProvider: Logger = logs.getLogger(LOGZIO_RUM_PROVIDER_NAME);
+  private tracer: Tracer = trace.getTracer(LOGZIO_RUM_PROVIDER_NAME);
 
   constructor(
     private readonly sessionId: string,
@@ -68,7 +68,7 @@ export class WebVitalsAggregator {
   }
 
   /**
-   * Flushes the collected metrics as logs.
+   * Flushes the collected metrics as spans.
    */
   public flushWebVitals(): void {
     if (Object.keys(this.collectedMetrics).length === 0) {
@@ -78,21 +78,21 @@ export class WebVitalsAggregator {
 
     rumLogger.debug(`collected ${Object.keys(this.collectedMetrics).length} web vitals`);
     Object.values(this.collectedMetrics).forEach((metric) => {
-      rumLogger.debug(`emitting web vital log ${metric.name}`);
+      rumLogger.debug(`emitting web vital span ${metric.name}`);
       this.recordWebVital(metric);
     });
     this.cleanup();
   }
 
   /**
-   * Records the metric as a log.
+   * Records the metric as a span.
    * @param metric - The metric to record.
    */
   private recordWebVital(metric: MetricWithAttribution): void {
     const urlObj = new URL(window.location.href);
 
-    // Get all attributes for the log
-    const logAttributes: Record<string, any> = {
+    // Get all attributes for the span
+    const spanAttributes: Record<string, any> = {
       'metric.rating': metric.rating,
       [ATTR_URL_PATH]: window.location.href,
       [ATTR_REQUEST_PATH]: urlObj.pathname,
@@ -102,18 +102,17 @@ export class WebVitalsAggregator {
       ...this.getMetricAttributes(metric),
     };
 
-    // Emit log with all attributes
-    this.emitWebVitalLog(metric, logAttributes);
+    // Emit span with all attributes
+    this.emitWebVitalSpan(metric, spanAttributes);
   }
 
   /**
-   * Emits a log with Web Vitals attributes.
-   * @param metric - The metric to log.
-   * @param attributes - The log attributes.
+   * Emits a span with Web Vitals attributes.
+   * @param metric - The metric to emit as a span.
+   * @param attributes - The span attributes.
    */
-  private emitWebVitalLog(metric: MetricWithAttribution, attributes: Record<string, any>): void {
-    this.logsProvider.emit({
-      severityText: 'INFO',
+  private emitWebVitalSpan(metric: MetricWithAttribution, attributes: Record<string, any>): void {
+    const span = this.tracer.startSpan(metric.name, {
       attributes: {
         [otelAttributeNames.EVENT_TYPE]: 'web_vital',
         [ATTR_WEB_VITAL_NAME]: metric.name,
@@ -127,6 +126,7 @@ export class WebVitalsAggregator {
         ...attributes,
       },
     });
+    span.end();
   }
 
   /**

@@ -20,6 +20,7 @@ import { LogzioContextManager } from '../context/LogzioContextManager';
 import { EnvironmentCollector, EnvironmentAttributes } from '../utils';
 import { rumLogger, SessionManager } from '../shared';
 import { getLogProvider, getTraceProvider } from './providers';
+import { SessionSampler } from './samplers';
 
 const enum DataType {
   LOGS = 'logs',
@@ -34,13 +35,16 @@ export class OpenTelemetryProvider {
   private static instance: OpenTelemetryProvider | null = null;
 
   private traceProvider: WebTracerProvider;
+  private sessionSampler: SessionSampler;
   private logProvider: LoggerProvider | null = null;
   private envData: EnvironmentAttributes = {};
 
   private constructor(private readonly config: RUMConfig) {
     this.envData = this.collectEnvDataSafe();
 
-    this.traceProvider = this.getTraceProvider();
+    const { provider, sampler } = this.createTraceProvider();
+    this.traceProvider = provider;
+    this.sessionSampler = sampler;
     if (config.tokens.logs) this.logProvider = this.getLogProvider();
   }
 
@@ -155,6 +159,14 @@ export class OpenTelemetryProvider {
   }
 
   /**
+   * Re-rolls the session sampling decision.
+   * Called by the session manager when a new session starts.
+   */
+  public rerollSampling(): void {
+    this.sessionSampler.reroll();
+  }
+
+  /**
    * Forces a flush of the data.
    */
   public forceFlush(): void {
@@ -163,10 +175,9 @@ export class OpenTelemetryProvider {
   }
 
   /**
-   * Returns a trace provider.
-   * @returns The trace provider.
+   * Creates a trace provider and session sampler.
    */
-  private getTraceProvider(): WebTracerProvider {
+  private createTraceProvider(): { provider: WebTracerProvider; sampler: SessionSampler } {
     return getTraceProvider(this.getResource(), this.getEndpointUrl(DataType.TRACES), this.config);
   }
 

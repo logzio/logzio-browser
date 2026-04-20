@@ -18,6 +18,8 @@ export class MutationObserverTracker {
   private subscribers: Set<MutationEventHandler> = new Set();
   private observer: MutationObserver | null = null;
   private isInitialized = false;
+  private pendingMutations: MutationEventData[] = [];
+  private rafId: number | null = null;
 
   private constructor() {}
 
@@ -90,6 +92,28 @@ export class MutationObserverTracker {
         significantChange: true,
       };
 
+      // Batch notifications: if RAF is available, defer; otherwise notify synchronously
+      if (typeof requestAnimationFrame !== 'undefined') {
+        this.pendingMutations.push(eventData);
+        if (this.rafId === null) {
+          this.rafId = requestAnimationFrame(() => this.flushPendingMutations());
+        }
+      } else {
+        this.notify(eventData);
+      }
+    }
+  }
+
+  /**
+   * Drains the pending mutations buffer and notifies subscribers.
+   * Swaps to a new array before draining so re-entrant mutations go into a fresh buffer.
+   */
+  private flushPendingMutations(): void {
+    this.rafId = null;
+    const mutations = this.pendingMutations;
+    this.pendingMutations = [];
+
+    for (const eventData of mutations) {
       this.notify(eventData);
     }
   }
@@ -228,6 +252,11 @@ export class MutationObserverTracker {
         tracker.observer.disconnect();
         tracker.observer = null;
       }
+      if (tracker.rafId !== null) {
+        cancelAnimationFrame(tracker.rafId);
+        tracker.rafId = null;
+      }
+      tracker.pendingMutations = [];
       tracker.subscribers.clear();
       tracker.isInitialized = false;
     }

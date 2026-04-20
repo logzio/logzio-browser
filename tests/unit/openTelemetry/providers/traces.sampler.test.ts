@@ -1,9 +1,5 @@
 import { getTraceProvider } from '../../../../src/openTelemetry/providers/traces';
 import {
-  MAX_SAMPLING_PERCENTAGE,
-  MIN_SAMPLING_PERCENTAGE,
-} from '../../../../src/openTelemetry/providers/constants';
-import {
   setupTracesTest,
   mockConstructCalls,
   exporterInstances,
@@ -45,32 +41,6 @@ jest.mock('@opentelemetry/sdk-trace-web', () => ({
       mockConstructCalls.push(['BatchSpanProcessor', exporter, config]);
     }
   },
-  AlwaysOnSampler: class MockAlwaysOnSampler {
-    __type = 'AlwaysOnSampler';
-  },
-  AlwaysOffSampler: class MockAlwaysOffSampler {
-    __type = 'AlwaysOffSampler';
-  },
-  TraceIdRatioBasedSampler: class MockTraceIdRatioBasedSampler {
-    __type = 'TraceIdRatioBasedSampler';
-    ratio: number;
-    constructor(ratio: number) {
-      this.ratio = ratio;
-    }
-  },
-  ParentBasedSampler: class MockParentBasedSampler {
-    __type = 'ParentBasedSampler';
-    root: any;
-    ratio: number | undefined;
-    constructor(config: { root: any }) {
-      this.root = config.root;
-      // Return the root sampler's type for easier testing
-      this.__type = config.root.__type;
-      if (config.root.ratio !== undefined) {
-        this.ratio = config.root.ratio;
-      }
-    }
-  },
 }));
 
 jest.mock('@opentelemetry/exporter-trace-otlp-proto', () => ({
@@ -84,50 +54,82 @@ jest.mock('@opentelemetry/exporter-trace-otlp-proto', () => ({
   },
 }));
 
+jest.mock('@src/openTelemetry/samplers', () => ({
+  SessionSampler: class MockSessionSampler {
+    __type = 'SessionSampler';
+    rate: number;
+    constructor(rate: number) {
+      this.rate = rate;
+      mockConstructCalls.push(['SessionSampler', rate]);
+    }
+    shouldSample() {
+      return { decision: 1 };
+    }
+    reroll() {}
+    toString() {
+      return `SessionSampler{rate=${this.rate}}`;
+    }
+  },
+}));
+
 describe('Traces Provider - Sampler Selection', () => {
   beforeEach(() => {
     setupTracesTest();
   });
 
-  it('should use AlwaysOnSampler when samplingRate is MAX_SAMPLING_PERCENTAGE', () => {
+  it('should use SessionSampler with the configured sampling rate', () => {
     const resource = createMockResource({ serviceName: 'test-service' });
     const endpoint = 'https://traces.example.com';
-    const config = createMockConfig({ samplingRate: MAX_SAMPLING_PERCENTAGE });
+    const config = createMockConfig({ samplingRate: 75 });
 
     getTraceProvider(resource, endpoint, config);
 
     const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
     const sampler = tracerCall[1].sampler;
-    expect(sampler.__type).toBe('AlwaysOnSampler');
+    expect(sampler.__type).toBe('SessionSampler');
+    expect(sampler.rate).toBe(75);
   });
 
-  it('should use AlwaysOffSampler when samplingRate is MIN_SAMPLING_PERCENTAGE', () => {
+  it('should use SessionSampler when samplingRate is 0', () => {
     const resource = createMockResource({ serviceName: 'test-service' });
     const endpoint = 'https://traces.example.com';
-    const config = createMockConfig({ samplingRate: MIN_SAMPLING_PERCENTAGE });
+    const config = createMockConfig({ samplingRate: 0 });
 
     getTraceProvider(resource, endpoint, config);
 
     const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
     const sampler = tracerCall[1].sampler;
-    expect(sampler.__type).toBe('AlwaysOffSampler');
+    expect(sampler.__type).toBe('SessionSampler');
+    expect(sampler.rate).toBe(0);
   });
 
-  it('should use TraceIdRatioBasedSampler for intermediate sampling rates', () => {
+  it('should use SessionSampler when samplingRate is 100', () => {
+    const resource = createMockResource({ serviceName: 'test-service' });
+    const endpoint = 'https://traces.example.com';
+    const config = createMockConfig({ samplingRate: 100 });
+
+    getTraceProvider(resource, endpoint, config);
+
+    const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
+    const sampler = tracerCall[1].sampler;
+    expect(sampler.__type).toBe('SessionSampler');
+    expect(sampler.rate).toBe(100);
+  });
+
+  it('should return the sampler alongside the provider', () => {
     const resource = createMockResource({ serviceName: 'test-service' });
     const endpoint = 'https://traces.example.com';
     const config = createMockConfig({ samplingRate: 50 });
 
-    getTraceProvider(resource, endpoint, config);
+    const result = getTraceProvider(resource, endpoint, config);
 
-    const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
-    const sampler = tracerCall[1].sampler;
-    expect(sampler.__type).toBe('TraceIdRatioBasedSampler');
-    expect(sampler.ratio).toBe(0.5);
+    expect(result.provider).toBeDefined();
+    expect(result.sampler).toBeDefined();
+    expect((result.sampler as any).__type).toBe('SessionSampler');
   });
 
   it.each(samplingTestCases)(
-    'should correctly select $expectedType for $description',
+    'should use SessionSampler for $description',
     ({ rate, expectedType }) => {
       const resource = createMockResource({ serviceName: 'test-service' });
       const endpoint = 'https://traces.example.com';
@@ -138,34 +140,6 @@ describe('Traces Provider - Sampler Selection', () => {
       const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
       const sampler = tracerCall[1].sampler;
       expect(sampler.__type).toBe(expectedType);
-
-      if (expectedType === 'TraceIdRatioBasedSampler') {
-        expect(sampler.ratio).toBe(rate / 100);
-      }
     },
   );
-
-  it('should use TraceIdRatioBasedSampler for sampling rate just above minimum', () => {
-    const resource = createMockResource({ serviceName: 'test-service' });
-    const endpoint = 'https://traces.example.com';
-    const configJustAboveMin = createMockConfig({ samplingRate: MIN_SAMPLING_PERCENTAGE + 1 });
-
-    getTraceProvider(resource, endpoint, configJustAboveMin);
-
-    const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
-    expect(tracerCall[1].sampler.__type).toBe('TraceIdRatioBasedSampler');
-    expect(tracerCall[1].sampler.ratio).toBe(0.01);
-  });
-
-  it('should use TraceIdRatioBasedSampler for sampling rate just below maximum', () => {
-    const resource = createMockResource({ serviceName: 'test-service' });
-    const endpoint = 'https://traces.example.com';
-    const configJustBelowMax = createMockConfig({ samplingRate: MAX_SAMPLING_PERCENTAGE - 1 });
-
-    getTraceProvider(resource, endpoint, configJustBelowMax);
-
-    const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
-    expect(tracerCall[1].sampler.__type).toBe('TraceIdRatioBasedSampler');
-    expect(tracerCall[1].sampler.ratio).toBe(0.99);
-  });
 });

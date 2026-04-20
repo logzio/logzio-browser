@@ -94,11 +94,11 @@ describe('RUMConfig', () => {
       region: 'us',
       tokens: { traces: 'trace-token' },
       endpoint: { url: 'https://example.com' },
-      enable: { errorTracking: false, webVitals: false, viewEvents: false, consoleLogs: false },
+      enable: { errorTracking: false, viewEvents: false, consoleLogs: false },
     });
     expect(config.tokens.logs).toBe('');
     expect(config.enable!.errorTracking).toBe(false);
-    expect(config.enable!.webVitals).toBe(false);
+    expect(config.enable!.webVitals).toBe(true);
   });
 
   it('should allow frustration detection without logs token', () => {
@@ -108,7 +108,6 @@ describe('RUMConfig', () => {
       endpoint: { url: 'https://example.com' },
       enable: {
         errorTracking: false,
-        webVitals: false,
         viewEvents: false,
         consoleLogs: false,
         frustrationDetection: true,
@@ -144,12 +143,12 @@ describe('RUMConfig', () => {
     });
 
     expect(rumLogger.warn).toHaveBeenCalledWith(
-      'Logs token is required in RUM configuration when error tracking, view events, console logs, or web vitals are enabled. These features will not be sent.',
+      'Logs token is required in RUM configuration when error tracking, view events, or console logs are enabled. These features will not be sent.',
     );
     expect(config.enable!.errorTracking).toBe(false);
     expect(config.enable!.viewEvents).toBe(false);
     expect(config.enable!.consoleLogs).toBe(false);
-    expect(config.enable!.webVitals).toBe(false);
+    expect(config.enable!.webVitals).toBe(true);
     // Frustration detection should still be enabled since it only uses traces
     expect(config.enable!.frustrationDetection).toBe(true);
   });
@@ -165,7 +164,6 @@ describe('RUMConfig', () => {
       },
       enable: {
         errorTracking: false,
-        webVitals: false,
       },
       samplingRate: -1,
       frustrationThresholds: {
@@ -190,7 +188,6 @@ describe('RUMConfig', () => {
       samplingRate: 101,
       enable: {
         errorTracking: false,
-        webVitals: false,
       },
     });
     expect(config.samplingRate).toBe(DEFAULT_SAMPLE_RATE);
