@@ -133,8 +133,8 @@ describe('RUMSessionManager lifecycle and events', () => {
 
     manager.start();
 
-    // Case A: Session exists — advance past throttle window so activity write goes through
-    jest.advanceTimersByTime(2001);
+    // Case A: Session exists — move clock past throttle window without firing timers
+    jest.setSystemTime(Date.now() + 2001);
     jest.clearAllMocks();
     (LocalStorageStore.get as jest.Mock).mockReturnValue('existing-session');
 
@@ -144,7 +144,7 @@ describe('RUMSessionManager lifecycle and events', () => {
     expect(RUMView).not.toHaveBeenCalled(); // No renew
 
     // Case B: Session missing
-    jest.advanceTimersByTime(2001);
+    jest.setSystemTime(Date.now() + 2001);
     jest.clearAllMocks();
     (LocalStorageStore.get as jest.Mock).mockReturnValue(null);
 
@@ -171,8 +171,8 @@ describe('RUMSessionManager lifecycle and events', () => {
     visibilityHandler();
     expect(mockOtelInstance.forceFlush).toHaveBeenCalled();
 
-    // Simulate visible — advance past throttle window
-    jest.advanceTimersByTime(2001);
+    // Simulate visible — move clock past throttle window without firing timers
+    jest.setSystemTime(Date.now() + 2001);
     jest.clearAllMocks();
     Object.defineProperty(document, 'hidden', { value: false, writable: true });
     visibilityHandler();
@@ -235,8 +235,8 @@ describe('RUMSessionManager lifecycle and events', () => {
       expect.any(String),
     );
 
-    // Advance past throttle window (2s)
-    jest.advanceTimersByTime(2001);
+    // Move clock past throttle window without firing timers
+    jest.setSystemTime(Date.now() + 2001);
     jest.clearAllMocks();
 
     // Now resume should write again
