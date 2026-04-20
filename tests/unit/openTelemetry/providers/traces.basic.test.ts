@@ -4,6 +4,7 @@ import {
   mockConstructCalls,
   createMockResource,
   createMockConfig,
+  createMockSampler,
   exporterInstances,
 } from '../../__utils__/tracesTestHelpers';
 
@@ -103,7 +104,8 @@ describe('Traces Provider - Basic Functionality', () => {
     const endpoint = 'https://traces.example.com';
     const config = createMockConfig();
 
-    const { provider } = getTraceProvider(resource, endpoint, config);
+    const sampler = createMockSampler(config.samplingRate);
+    const provider = getTraceProvider(resource, endpoint, config, sampler);
 
     // Verify WebTracerProvider was created
     expect(provider).toBeDefined();
@@ -122,7 +124,8 @@ describe('Traces Provider - Basic Functionality', () => {
     const endpoint = 'https://traces.example.com';
     const config = createMockConfig();
 
-    const { provider } = getTraceProvider(resource, endpoint, config);
+    const sampler = createMockSampler(config.samplingRate);
+    const provider = getTraceProvider(resource, endpoint, config, sampler);
 
     // Should return the mocked WebTracerProvider instance
     expect(provider).toBeDefined();
@@ -134,7 +137,7 @@ describe('Traces Provider - Basic Functionality', () => {
     const endpoint = 'https://traces.example.com';
     const config = createMockConfig({ enable: undefined });
 
-    expect(() => getTraceProvider(resource, endpoint, config)).not.toThrow();
+    expect(() => getTraceProvider(resource, endpoint, config, createMockSampler())).not.toThrow();
 
     const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
     const processors = tracerCall[1].spanProcessors;
@@ -151,7 +154,7 @@ describe('Traces Provider - Basic Functionality', () => {
     const endpoint = 'https://traces.example.com';
     const config = createMockConfig({ enable: {} });
 
-    expect(() => getTraceProvider(resource, endpoint, config)).not.toThrow();
+    expect(() => getTraceProvider(resource, endpoint, config, createMockSampler())).not.toThrow();
 
     const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
     const processors = tracerCall[1].spanProcessors;
@@ -171,7 +174,8 @@ describe('Traces Provider - Basic Functionality', () => {
       enable: { frustrationDetection: true },
     });
 
-    const { provider } = getTraceProvider(resource, endpoint, config);
+    const sampler = createMockSampler(config.samplingRate);
+    const provider = getTraceProvider(resource, endpoint, config, sampler);
 
     // Verify all expected components were created
     expect(provider).toBeDefined();

@@ -1,6 +1,7 @@
 import { Resource } from '@opentelemetry/resources';
 import {
   BatchSpanProcessor,
+  Sampler,
   SpanExporter,
   SpanProcessor,
   WebTracerProvider,
@@ -12,7 +13,7 @@ import {
   SessionContextSpanProcessor,
   RequestPathSpanProcessor,
 } from '../processors';
-import { SessionSampler } from '../samplers';
+
 import { getAuthorizationHeader } from '../../utils/helpers';
 import {
   MAX_BULK_SIZE,
@@ -22,23 +23,17 @@ import {
   LOGZIO_DATA_TYPE_HEADER,
 } from './constants';
 
-export interface TraceProviderResult {
-  provider: WebTracerProvider;
-  sampler: SessionSampler;
-}
-
 export function getTraceProvider(
   resource: Resource,
   endpoint: string,
   config: RUMConfig,
-): TraceProviderResult {
-  const sampler = new SessionSampler(config.samplingRate);
-  const provider = new WebTracerProvider({
+  sampler: Sampler,
+): WebTracerProvider {
+  return new WebTracerProvider({
     resource,
     sampler,
     spanProcessors: getSpanProcessors(endpoint, config),
   });
-  return { provider, sampler };
 }
 
 function getSpanProcessors(endpoint: string, config: RUMConfig): SpanProcessor[] {

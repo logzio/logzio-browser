@@ -19,9 +19,8 @@ describe('OpenTelemetryProvider Lifecycle', () => {
       });
       const mockTraceProvider = { register: jest.fn(), forceFlush: jest.fn(), shutdown: jest.fn() };
       const mockLogProvider = { forceFlush: jest.fn(), shutdown: jest.fn() };
-      const mockSampler = { reroll: jest.fn(), shouldSample: jest.fn(), toString: jest.fn() };
 
-      mockGetTraceProvider.mockReturnValue({ provider: mockTraceProvider, sampler: mockSampler });
+      mockGetTraceProvider.mockReturnValue(mockTraceProvider);
       mockGetLogProvider.mockReturnValue(mockLogProvider);
 
       const provider = createProviderInstance(config);
@@ -36,8 +35,7 @@ describe('OpenTelemetryProvider Lifecycle', () => {
         tokens: { traces: 'trace-token' }, // only traces
       });
       const mockTraceProvider = { register: jest.fn(), forceFlush: jest.fn(), shutdown: jest.fn() };
-      const mockSampler = { reroll: jest.fn(), shouldSample: jest.fn(), toString: jest.fn() };
-      mockGetTraceProvider.mockReturnValue({ provider: mockTraceProvider, sampler: mockSampler });
+      mockGetTraceProvider.mockReturnValue(mockTraceProvider);
 
       const provider = createProviderInstance(config);
 
@@ -56,13 +54,12 @@ describe('OpenTelemetryProvider Lifecycle', () => {
         forceFlush: jest.fn(),
         shutdown: jest.fn().mockResolvedValue(undefined),
       };
-      const mockSampler = { reroll: jest.fn(), shouldSample: jest.fn(), toString: jest.fn() };
       const mockLogProvider = {
         forceFlush: jest.fn(),
         shutdown: jest.fn().mockResolvedValue(undefined),
       };
 
-      mockGetTraceProvider.mockReturnValue({ provider: mockTraceProvider, sampler: mockSampler });
+      mockGetTraceProvider.mockReturnValue(mockTraceProvider);
       mockGetLogProvider.mockReturnValue(mockLogProvider);
 
       createProviderInstance(config);
@@ -82,8 +79,7 @@ describe('OpenTelemetryProvider Lifecycle', () => {
         forceFlush: jest.fn(),
         shutdown: jest.fn().mockResolvedValue(undefined),
       };
-      const mockSampler = { reroll: jest.fn(), shouldSample: jest.fn(), toString: jest.fn() };
-      mockGetTraceProvider.mockReturnValue({ provider: mockTraceProvider, sampler: mockSampler });
+      mockGetTraceProvider.mockReturnValue(mockTraceProvider);
 
       createProviderInstance(config);
       const result = await OpenTelemetryProvider.shutdown();

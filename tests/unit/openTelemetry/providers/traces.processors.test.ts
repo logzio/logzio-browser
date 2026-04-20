@@ -5,6 +5,7 @@ import {
   mockConstructCalls,
   createMockResource,
   createMockConfig,
+  createMockSampler,
   exporterInstances,
 } from '../../__utils__/tracesTestHelpers';
 
@@ -112,7 +113,7 @@ describe('Traces Provider - Span Processors Configuration', () => {
       enable: { frustrationDetection: false },
     });
 
-    getTraceProvider(resource, endpoint, config);
+    getTraceProvider(resource, endpoint, config, createMockSampler());
 
     const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
     const processors = tracerCall[1].spanProcessors;
@@ -136,7 +137,7 @@ describe('Traces Provider - Span Processors Configuration', () => {
       enable: { frustrationDetection: true },
     });
 
-    getTraceProvider(resource, endpoint, config);
+    getTraceProvider(resource, endpoint, config, createMockSampler());
 
     const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
     const processors = tracerCall[1].spanProcessors;
@@ -160,7 +161,7 @@ describe('Traces Provider - Span Processors Configuration', () => {
     const endpoint = 'https://traces.example.com';
     const config = createMockConfig();
 
-    getTraceProvider(resource, endpoint, config);
+    getTraceProvider(resource, endpoint, config, createMockSampler());
 
     const batchProcessorCall = mockConstructCalls.find(([name]) => name === 'BatchSpanProcessor');
     expect(batchProcessorCall).toBeTruthy();
@@ -176,7 +177,7 @@ describe('Traces Provider - Span Processors Configuration', () => {
     const endpoint = 'https://traces.example.com';
     const config = createMockConfig();
 
-    getTraceProvider(resource, endpoint, config);
+    getTraceProvider(resource, endpoint, config, createMockSampler());
 
     const sessionProcessorCall = mockConstructCalls.find(
       ([name]) => name === 'SessionContextSpanProcessor',
@@ -195,7 +196,7 @@ describe('Traces Provider - Span Processors Configuration', () => {
       enable: { frustrationDetection: frustration },
     });
 
-    getTraceProvider(resource, endpoint, config);
+    getTraceProvider(resource, endpoint, config, createMockSampler());
 
     const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
     const processors = tracerCall[1].spanProcessors;

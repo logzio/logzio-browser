@@ -1,4 +1,5 @@
 import { getTraceProvider } from '../../../../src/openTelemetry/providers/traces';
+import { SessionSampler } from '../../../../src/openTelemetry/samplers';
 import {
   setupTracesTest,
   mockConstructCalls,
@@ -77,69 +78,46 @@ describe('Traces Provider - Sampler Selection', () => {
     setupTracesTest();
   });
 
-  it('should use SessionSampler with the configured sampling rate', () => {
-    const resource = createMockResource({ serviceName: 'test-service' });
-    const endpoint = 'https://traces.example.com';
-    const config = createMockConfig({ samplingRate: 75 });
+  it('should create SessionSampler with the configured sampling rate', () => {
+    const sampler = new SessionSampler(75);
 
-    getTraceProvider(resource, endpoint, config);
-
-    const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
-    const sampler = tracerCall[1].sampler;
-    expect(sampler.__type).toBe('SessionSampler');
-    expect(sampler.rate).toBe(75);
+    expect((sampler as any).__type).toBe('SessionSampler');
+    expect((sampler as any).rate).toBe(75);
   });
 
-  it('should use SessionSampler when samplingRate is 0', () => {
-    const resource = createMockResource({ serviceName: 'test-service' });
-    const endpoint = 'https://traces.example.com';
-    const config = createMockConfig({ samplingRate: 0 });
+  it('should create SessionSampler when samplingRate is 0', () => {
+    const sampler = new SessionSampler(0);
 
-    getTraceProvider(resource, endpoint, config);
-
-    const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
-    const sampler = tracerCall[1].sampler;
-    expect(sampler.__type).toBe('SessionSampler');
-    expect(sampler.rate).toBe(0);
+    expect((sampler as any).__type).toBe('SessionSampler');
+    expect((sampler as any).rate).toBe(0);
   });
 
-  it('should use SessionSampler when samplingRate is 100', () => {
-    const resource = createMockResource({ serviceName: 'test-service' });
-    const endpoint = 'https://traces.example.com';
-    const config = createMockConfig({ samplingRate: 100 });
+  it('should create SessionSampler when samplingRate is 100', () => {
+    const sampler = new SessionSampler(100);
 
-    getTraceProvider(resource, endpoint, config);
-
-    const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
-    const sampler = tracerCall[1].sampler;
-    expect(sampler.__type).toBe('SessionSampler');
-    expect(sampler.rate).toBe(100);
+    expect((sampler as any).__type).toBe('SessionSampler');
+    expect((sampler as any).rate).toBe(100);
   });
 
-  it('should return the sampler alongside the provider', () => {
+  it('should pass sampler through to WebTracerProvider', () => {
     const resource = createMockResource({ serviceName: 'test-service' });
     const endpoint = 'https://traces.example.com';
     const config = createMockConfig({ samplingRate: 50 });
+    const sampler = new SessionSampler(config.samplingRate);
 
-    const result = getTraceProvider(resource, endpoint, config);
+    const provider = getTraceProvider(resource, endpoint, config, sampler);
 
-    expect(result.provider).toBeDefined();
-    expect(result.sampler).toBeDefined();
-    expect((result.sampler as any).__type).toBe('SessionSampler');
+    expect(provider).toBeDefined();
+    const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
+    expect(tracerCall[1].sampler).toBe(sampler);
   });
 
   it.each(samplingTestCases)(
     'should use SessionSampler for $description',
     ({ rate, expectedType }) => {
-      const resource = createMockResource({ serviceName: 'test-service' });
-      const endpoint = 'https://traces.example.com';
-      const config = createMockConfig({ samplingRate: rate });
+      const sampler = new SessionSampler(rate);
 
-      getTraceProvider(resource, endpoint, config);
-
-      const tracerCall = mockConstructCalls.find(([name]) => name === 'WebTracerProvider');
-      const sampler = tracerCall[1].sampler;
-      expect(sampler.__type).toBe(expectedType);
+      expect((sampler as any).__type).toBe(expectedType);
     },
   );
 });

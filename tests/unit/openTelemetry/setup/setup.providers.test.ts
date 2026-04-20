@@ -44,6 +44,7 @@ describe('OpenTelemetryProvider Construction', () => {
         expect.anything(),
         'https://whatever/third/party/logzio/endpoint/traces',
         config,
+        expect.anything(),
       );
       expect(mockGetLogProvider).toHaveBeenCalledWith(
         expect.anything(),

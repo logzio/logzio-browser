@@ -37,8 +37,8 @@ describe('OpenTelemetryProvider Registration', () => {
       expect(mockContextManager.enable).toHaveBeenCalledTimes(1);
       // Get the mock instance that was actually used
       expect(mockGetTraceProvider).toHaveBeenCalled();
-      const traceProviderResult = mockGetTraceProvider.mock.results[0].value;
-      expect(traceProviderResult.provider.register).toHaveBeenCalledWith({
+      const traceProvider = mockGetTraceProvider.mock.results[0].value;
+      expect(traceProvider.register).toHaveBeenCalledWith({
         contextManager: mockContextManager,
       });
     });
@@ -48,8 +48,7 @@ describe('OpenTelemetryProvider Registration', () => {
     it('should register trace provider', () => {
       const config = createConfig();
       const mockTraceProvider = { register: jest.fn(), forceFlush: jest.fn(), shutdown: jest.fn() };
-      const mockSampler = { reroll: jest.fn(), shouldSample: jest.fn(), toString: jest.fn() };
-      mockGetTraceProvider.mockReturnValue({ provider: mockTraceProvider, sampler: mockSampler });
+      mockGetTraceProvider.mockReturnValue(mockTraceProvider);
 
       const provider = createProviderInstance(config);
       provider.registerProviders();

@@ -10,6 +10,7 @@ import {
   exporterInstances,
   createMockResource,
   createMockConfig,
+  createMockSampler,
 } from '../../__utils__/tracesTestHelpers';
 
 // Mock processors
@@ -108,7 +109,7 @@ describe('Traces Provider - Exporter Configuration', () => {
     const endpoint = 'https://traces.example.com/v1/traces';
     const config = createMockConfig();
 
-    getTraceProvider(resource, endpoint, config);
+    getTraceProvider(resource, endpoint, config, createMockSampler());
 
     const exporterCall = mockConstructCalls.find(([name]) => name === 'OTLPTraceExporter');
     expect(exporterCall).toBeTruthy();
@@ -127,7 +128,7 @@ describe('Traces Provider - Exporter Configuration', () => {
     const endpoint = 'https://traces.example.com';
     const config = createMockConfig();
 
-    getTraceProvider(resource, endpoint, config);
+    getTraceProvider(resource, endpoint, config, createMockSampler());
 
     const exporterCall = mockConstructCalls.find(([name]) => name === 'OTLPTraceExporter');
     const batchProcessorCall = mockConstructCalls.find(([name]) => name === 'BatchSpanProcessor');
@@ -149,7 +150,7 @@ describe('Traces Provider - Exporter Configuration', () => {
     const resource = createMockResource({ serviceName: 'test-service' });
     const config = createMockConfig();
 
-    getTraceProvider(resource, endpoint, config);
+    getTraceProvider(resource, endpoint, config, createMockSampler());
 
     const exporterCall = mockConstructCalls.find(([name]) => name === 'OTLPTraceExporter');
     expect(exporterCall[1].url).toBe(endpoint);
@@ -167,7 +168,7 @@ describe('Traces Provider - Exporter Configuration', () => {
     const resource = createMockResource({ serviceName: 'test-service' });
     const config = createMockConfig();
 
-    expect(() => getTraceProvider(resource, endpoint, config)).not.toThrow();
+    expect(() => getTraceProvider(resource, endpoint, config, createMockSampler())).not.toThrow();
   });
 
   it('should create single exporter instance per provider call', () => {
@@ -175,7 +176,7 @@ describe('Traces Provider - Exporter Configuration', () => {
     const endpoint = 'https://traces.example.com';
     const config = createMockConfig();
 
-    getTraceProvider(resource, endpoint, config);
+    getTraceProvider(resource, endpoint, config, createMockSampler());
 
     expect(exporterInstances).toHaveLength(1);
 
@@ -189,13 +190,13 @@ describe('Traces Provider - Exporter Configuration', () => {
     const config = createMockConfig();
 
     // First call
-    getTraceProvider(resource, endpoint, config);
+    getTraceProvider(resource, endpoint, config, createMockSampler());
     expect(exporterInstances).toHaveLength(1);
     const firstExporter = exporterInstances[0];
 
     // Second call (without clearing state)
     mockConstructCalls.length = 0; // Only clear calls, not instances
-    getTraceProvider(resource, endpoint, config);
+    getTraceProvider(resource, endpoint, config, createMockSampler());
 
     expect(exporterInstances).toHaveLength(2);
     const secondExporter = exporterInstances[1];

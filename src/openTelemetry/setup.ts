@@ -42,9 +42,8 @@ export class OpenTelemetryProvider {
   private constructor(private readonly config: RUMConfig) {
     this.envData = this.collectEnvDataSafe();
 
-    const { provider, sampler } = this.createTraceProvider();
-    this.traceProvider = provider;
-    this.sessionSampler = sampler;
+    this.sessionSampler = new SessionSampler(config.samplingRate);
+    this.traceProvider = this.getTraceProvider();
     if (config.tokens.logs) this.logProvider = this.getLogProvider();
   }
 
@@ -175,10 +174,15 @@ export class OpenTelemetryProvider {
   }
 
   /**
-   * Creates a trace provider and session sampler.
+   * Creates and returns the trace provider.
    */
-  private createTraceProvider(): { provider: WebTracerProvider; sampler: SessionSampler } {
-    return getTraceProvider(this.getResource(), this.getEndpointUrl(DataType.TRACES), this.config);
+  private getTraceProvider(): WebTracerProvider {
+    return getTraceProvider(
+      this.getResource(),
+      this.getEndpointUrl(DataType.TRACES),
+      this.config,
+      this.sessionSampler,
+    );
   }
 
   /**

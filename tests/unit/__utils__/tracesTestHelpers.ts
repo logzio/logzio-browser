@@ -96,6 +96,8 @@ export const createMockResource = (attributes: any = {}) => {
   return new MockResource(attributes);
 };
 
+export const createMockSampler = (rate: number = 50) => new MockSessionSampler(rate);
+
 export const createMockConfig = (overrides: any = {}) => {
   return {
     tokens: {

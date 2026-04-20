@@ -4,16 +4,9 @@
 
 // Mock providers
 export const mockGetTraceProvider = jest.fn(() => ({
-  provider: {
-    register: jest.fn(),
-    forceFlush: jest.fn(),
-    shutdown: jest.fn().mockResolvedValue(undefined),
-  },
-  sampler: {
-    reroll: jest.fn(),
-    shouldSample: jest.fn(() => ({ decision: 1 })),
-    toString: jest.fn(() => 'SessionSampler{rate=100, sampled=true}'),
-  },
+  register: jest.fn(),
+  forceFlush: jest.fn(),
+  shutdown: jest.fn().mockResolvedValue(undefined),
 }));
 
 export const mockGetMetricsProvider = jest.fn(() => ({
@@ -30,6 +23,16 @@ jest.mock('@src/openTelemetry/providers', () => ({
   getTraceProvider: mockGetTraceProvider,
   getMetricsProvider: mockGetMetricsProvider,
   getLogProvider: mockGetLogProvider,
+}));
+
+// Mock SessionSampler (used directly in setup.ts constructor)
+export const mockSessionSamplerReroll = jest.fn();
+jest.mock('@src/openTelemetry/samplers', () => ({
+  SessionSampler: jest.fn().mockImplementation(() => ({
+    reroll: mockSessionSamplerReroll,
+    shouldSample: jest.fn(() => ({ decision: 1 })),
+    toString: jest.fn(() => 'SessionSampler{rate=100, sampled=true}'),
+  })),
 }));
 
 // Mock OpenTelemetry API
