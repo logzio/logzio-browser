@@ -3,9 +3,20 @@ import { LogRecord, SeverityNumber } from '@opentelemetry/api-logs';
 import { rumLogger } from '../shared';
 import { ATTR_CONSOLE_STACK_TRACE } from './semconv';
 
-// Cache encoder/decoder instances to avoid re-allocation on every log
-const textEncoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
-const textDecoder = typeof TextDecoder !== 'undefined' ? new TextDecoder() : null;
+// Cache encoder/decoder instances to avoid re-allocation on every log.
+// Wrapped in try/catch to preserve fallback behavior if a polyfill throws on construction.
+let textEncoder: TextEncoder | null = null;
+let textDecoder: TextDecoder | null = null;
+try {
+  textEncoder = new TextEncoder();
+} catch {
+  /* fallback to string.length */
+}
+try {
+  textDecoder = new TextDecoder();
+} catch {
+  /* fallback to string methods */
+}
 
 const CONSOLE_METHODS_ARRAY = ['log', 'info', 'warn', 'error', 'debug'] as const;
 
