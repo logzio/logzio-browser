@@ -174,8 +174,7 @@ export class OpenTelemetryProvider {
   }
 
   /**
-   * Returns a trace provider.
-   * @returns The trace provider.
+   * Creates and returns the trace provider.
    */
   private getTraceProvider(): WebTracerProvider {
     return getTraceProvider(

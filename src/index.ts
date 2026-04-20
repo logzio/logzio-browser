@@ -27,7 +27,8 @@ export class LogzioRUM {
     }
 
     try {
-      const sdk = new LogzioRUM(new RUMConfig(config));
+      const rumConfig = new RUMConfig(config);
+      const sdk = new LogzioRUM(rumConfig);
       LogzioRUM.instance = sdk;
       sdk.start();
     } catch (error) {
